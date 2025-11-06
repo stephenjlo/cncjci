@@ -24,3 +24,9 @@ DOCKER-GUIDE.md
 docker/nginx/default.conf
 setup-docker.sh
 .idea
+###> symfony/webpack-encore-bundle ###
+/node_modules/
+/public/build/
+npm-debug.log
+yarn-error.log
+###< symfony/webpack-encore-bundle ###

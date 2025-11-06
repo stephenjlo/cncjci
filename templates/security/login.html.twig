@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Annuaire Juridique CI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .login-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem 1rem 0 0;
+            text-align: center;
+        }
+
+        .login-body {
+            background: white;
+            padding: 2rem;
+            border-radius: 0 0 1rem 1rem;
+        }
+
+        .brand-logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #ff7900 0%, #e66d00 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="login-card">
+    <div class="login-header">
+        <div class="brand-logo">
+            <i class="bi bi-briefcase-fill"></i>
+        </div>
+        <h4 class="mb-0">Annuaire Juridique CI</h4>
+        <p class="text-muted mb-0">Administration</p>
+    </div>
+
+    <div class="login-body">
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                {{ error.messageKey|trans(error.messageData, 'security') }}
+            </div>
+        {% endif %}
+
+        {% if app.user %}
+            <div class="alert alert-info">
+                Vous êtes connecté en tant que {{ app.user.userIdentifier }}.
+                <a href="{{ path('app_logout') }}">Se déconnecter</a>
+            </div>
+        {% endif %}
+
+        <form method="post">
+            <div class="mb-3">
+                <label for="inputEmail" class="form-label">
+                    <i class="bi bi-envelope"></i> Email
+                </label>
+                <input type="email"
+                       value="{{ last_username }}"
+                       name="_username"
+                       id="inputEmail"
+                       class="form-control form-control-lg"
+                       autocomplete="email"
+                       required
+                       autofocus
+                       placeholder="votre@email.com">
+            </div>
+
+            <div class="mb-3">
+                <label for="inputPassword" class="form-label">
+                    <i class="bi bi-lock"></i> Mot de passe
+                </label>
+                <input type="password"
+                       name="_password"
+                       id="inputPassword"
+                       class="form-control form-control-lg"
+                       autocomplete="current-password"
+                       required
+                       placeholder="••••••••">
+            </div>
+
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="remember_me" name="_remember_me">
+                <label class="form-check-label" for="remember_me">
+                    Se souvenir de moi
+                </label>
+            </div>
+
+            <button class="btn btn-primary btn-lg w-100" type="submit">
+                <i class="bi bi-box-arrow-in-right"></i>
+                Se connecter
+            </button>
+        </form>
+
+        <div class="text-center mt-4">
+{#            <a href="{{ path('api_lawyers_list') }}" class="text-muted text-decoration-none">#}
+            <a href="#" class="text-muted text-decoration-none">
+                <i class="bi bi-arrow-left"></i>
+                Retour au site
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Administration{% endblock %} - Annuaire Juridique CI</title>
+
+    {# Bootstrap 5 CSS #}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    {# Bootstrap Icons #}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    {# Leaflet CSS (pour les cartes) #}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    {% block stylesheets %}
+        <style>
+            :root {
+                --primary-color: #ff7900;
+                --secondary-color: #00A651;
+                --dark-color: #2C3E50;
+            }
+
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            }
+
+            .navbar-brand {
+                font-weight: 700;
+                color: var(--primary-color) !important;
+            }
+
+            .sidebar {
+                min-height: calc(100vh - 56px);
+                background: linear-gradient(135deg, var(--dark-color) 0%, #34495e 100%);
+                box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            }
+
+            .sidebar .nav-link {
+                color: rgba(255, 255, 255, 0.8);
+                padding: 0.75rem 1.5rem;
+                transition: all 0.3s;
+                border-left: 3px solid transparent;
+            }
+
+            .sidebar .nav-link:hover,
+            .sidebar .nav-link.active {
+                color: white;
+                background: rgba(255, 255, 255, 0.1);
+                border-left-color: var(--primary-color);
+            }
+
+            .sidebar .nav-link i {
+                margin-right: 0.5rem;
+                width: 20px;
+            }
+
+            .main-content {
+                background: #f8f9fa;
+                min-height: calc(100vh - 56px);
+                padding: 2rem;
+            }
+
+            .card {
+                border: none;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                margin-bottom: 1.5rem;
+            }
+
+            .card-header {
+                background: white;
+                border-bottom: 2px solid var(--primary-color);
+                font-weight: 600;
+                padding: 1rem 1.5rem;
+            }
+
+            .btn-primary {
+                background-color: var(--primary-color);
+                border-color: var(--primary-color);
+            }
+
+            .btn-primary:hover {
+                background-color: #e66d00;
+                border-color: #e66d00;
+            }
+
+            .badge-role {
+                padding: 0.5em 0.75em;
+                font-weight: 500;
+            }
+
+            .table-actions {
+                white-space: nowrap;
+            }
+
+            .table-actions .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.875rem;
+            }
+
+            .alert {
+                border-left: 4px solid;
+                border-radius: 0;
+            }
+
+            .alert-success {
+                border-left-color: var(--secondary-color);
+            }
+
+            .alert-danger {
+                border-left-color: #dc3545;
+            }
+
+            .user-info {
+                display: flex;
+                align-items: center;
+                padding: 1rem 1.5rem;
+                color: white;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                margin-bottom: 1rem;
+            }
+
+            .user-avatar {
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                background: var(--primary-color);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 1.25rem;
+                margin-right: 1rem;
+            }
+
+            #address-map {
+                height: 350px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .address-results {
+                position: absolute;
+                z-index: 1000;
+                background: white;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+                border-radius: 4px;
+                max-height: 300px;
+                overflow-y: auto;
+            }
+
+            .form-label {
+                font-weight: 500;
+                color: var(--dark-color);
+            }
+
+            .form-control:focus,
+            .form-select:focus {
+                border-color: var(--primary-color);
+                box-shadow: 0 0 0 0.25rem rgba(255, 121, 0, 0.25);
+            }
+        </style>
+    {% endblock %}
+</head>
+<body>
+{# Navigation Bar #}
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ path('admin_dashboard') }}">
+            <i class="bi bi-briefcase-fill"></i>
+            Annuaire Juridique CI
+        </a>
+
+        <div class="ms-auto d-flex align-items-center">
+                <span class="me-3">
+                    <i class="bi bi-person-circle"></i>
+                    {{ app.user.fullName }}
+                </span>
+
+            {% if is_granted('ROLE_SUPER_ADMIN') %}
+                <span class="badge bg-danger me-3">Super Admin</span>
+            {% elseif is_granted('ROLE_RESPO_CABINET') %}
+                <span class="badge bg-warning text-dark me-3">Responsable Cabinet</span>
+            {% elseif is_granted('ROLE_LAWYER') %}
+                <span class="badge bg-info me-3">Avocat</span>
+            {% endif %}
+
+            <a href="{{ path('app_logout') }}" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-box-arrow-right"></i>
+                Déconnexion
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        {# Sidebar #}
+        <nav class="col-md-3 col-lg-2 sidebar">
+            <div class="user-info">
+                <div class="user-avatar">
+                    {{ app.user.firstName|slice(0, 1)|upper }}
+                </div>
+                <div>
+                    <div class="fw-bold">{{ app.user.fullName }}</div>
+                    <small class="text-white-50">{{ app.user.email }}</small>
+                </div>
+            </div>
+
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {{ app.request.attributes.get('_route') == 'admin_dashboard' ? 'active' : '' }}"
+                       href="{{ path('admin_dashboard') }}">
+                        <i class="bi bi-speedometer2"></i>
+                        Dashboard
+                    </a>
+                </li>
+
+                {% if is_granted('ROLE_SUPER_ADMIN') %}
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'admin_cabinet' in app.request.attributes.get('_route') ? 'active' : '' }}"
+                           href="{{ path('admin_cabinet_index') }}">
+                            <i class="bi bi-building"></i>
+                            Cabinets
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% if is_granted('ROLE_RESPO_CABINET') %}
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'admin_lawyer' in app.request.attributes.get('_route') and 'profile' not in app.request.attributes.get('_route') ? 'active' : '' }}"
+                           href="{{ path('admin_lawyer_index') }}">
+                            <i class="bi bi-people"></i>
+                            Avocats
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% if is_granted('ROLE_LAWYER') %}
+                    <li class="nav-item">
+                        <a class="nav-link {{ app.request.attributes.get('_route') == 'admin_lawyer_profile' ? 'active' : '' }}"
+                           href="{{ path('admin_lawyer_profile') }}">
+                            <i class="bi bi-person-badge"></i>
+                            Mon Profil
+                        </a>
+                    </li>
+                {% endif %}
+
+                <li class="nav-item mt-4">
+                    <hr class="border-white opacity-25">
+                </li>
+
+                <li class="nav-item">
+{#                    <a class="nav-link" href="{{ path('api_lawyers_list') }}" target="_blank">#}
+                    <a class="nav-link" href="#" target="_blank">
+                        <i class="bi bi-code-square"></i>
+                        API Documentation
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        {# Main Content #}
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            {# Flash Messages #}
+            {% for type, messages in app.flashes %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ type }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-{{ type == 'success' ? 'check-circle' : 'exclamation-triangle' }}-fill me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endfor %}
+
+            {% block body %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+{# Bootstrap JS #}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+{# Leaflet JS #}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+{% block javascripts %}{% endblock %}
+</body>
+</html>
