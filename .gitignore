@@ -18,3 +18,9 @@
 .phpunit.result.cache
 /phpunit.xml
 ###< symfony/phpunit-bridge ###
+
+.env.local.docker
+DOCKER-GUIDE.md
+docker/nginx/default.conf
+setup-docker.sh
+.idea
