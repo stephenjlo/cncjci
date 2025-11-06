@@ -1,0 +1,5 @@
+RewriteEngine On
+
+# Si la requête ne vise pas déjà /public, on y redirige
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteRule ^(.*)$ public/$1 [L]
