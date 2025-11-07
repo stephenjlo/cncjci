@@ -24,3 +24,7 @@ DOCKER-GUIDE.md
 docker/nginx/default.conf
 setup-docker.sh
 .idea
+
+assets/
+node_modules/
+public/build/
