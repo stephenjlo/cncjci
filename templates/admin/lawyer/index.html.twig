@@ -1,0 +1,271 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Gestion des Avocats{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-people text-primary"></i>
+            Gestion des Avocats
+        </h1>
+        <a href="{{ path('admin_lawyer_new') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i>
+            Nouvel Avocat
+        </a>
+    </div>
+
+    {# Information contextuelle pour RESPO_CABINET #}
+    {% if is_granted('ROLE_RESPO_CABINET') and not is_granted('ROLE_SUPER_ADMIN') %}
+        <div class="alert alert-info mb-4">
+            <i class="bi bi-info-circle"></i>
+            <strong>Cabinet : {{ app.user.cabinet.name }}</strong>
+            <br>
+            <small>Vous ne pouvez gérer que les avocats de votre cabinet.</small>
+        </div>
+    {% endif %}
+
+    {# Barre de recherche #}
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" action="{{ path('admin_lawyer_index') }}" class="row g-3">
+                <div class="col-md-10">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text"
+                               name="search"
+                               class="form-control"
+                               placeholder="Rechercher un avocat par nom ou prénom..."
+                               value="{{ search }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        Rechercher
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# Liste des avocats #}
+    {% if lawyers|length > 0 %}
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-list-ul"></i>
+                Liste des avocats ({{ lawyers|length }} résultat{{ lawyers|length > 1 ? 's' : '' }})
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">Photo</th>
+                            <th>Nom complet</th>
+                            <th>Cabinet</th>
+                            <th>Spécialités</th>
+                            <th>Contact</th>
+                            <th>Barreau</th>
+                            <th style="width: 150px;" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lawyer in lawyers %}
+                            <tr>
+                                <td>
+                                    {% if lawyer.photoUrl %}
+                                        <img src="{{ lawyer.photoUrl }}"
+                                             alt="{{ lawyer.fullName }}"
+                                             class="rounded-circle"
+                                             style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center"
+                                             style="width: 40px; height: 40px;">
+                                            <i class="bi bi-person text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="fw-bold">{{ lawyer.fullName }}</div>
+                                    {% if lawyer.barNumber %}
+                                        <small class="text-muted">
+                                            <i class="bi bi-card-text"></i>
+                                            {{ lawyer.barNumber }}
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if lawyer.cabinet %}
+                                        <i class="bi bi-building"></i>
+                                        {{ lawyer.cabinet.name }}
+                                        {% if lawyer.cabinet.managingPartner and lawyer.cabinet.managingPartner.id == lawyer.id %}
+                                            <br>
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-star"></i>
+                                                Responsable
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if lawyer.specialties|length > 0 %}
+                                        {% for specialty in lawyer.specialties|slice(0, 2) %}
+                                            <span class="badge bg-secondary me-1">
+                                                {{ specialty.name }}
+                                            </span>
+                                        {% endfor %}
+                                        {% if lawyer.specialties|length > 2 %}
+                                            <span class="badge bg-light text-dark">
+                                                +{{ lawyer.specialties|length - 2 }}
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if lawyer.primaryEmail %}
+                                        <div>
+                                            <i class="bi bi-envelope"></i>
+                                            <small>{{ lawyer.primaryEmail.email }}</small>
+                                        </div>
+                                    {% elseif lawyer.email %}
+                                        <div>
+                                            <i class="bi bi-envelope"></i>
+                                            <small>{{ lawyer.email }}</small>
+                                        </div>
+                                    {% endif %}
+                                    {% if lawyer.primaryPhone %}
+                                        <div>
+                                            <i class="bi bi-telephone"></i>
+                                            <small>{{ lawyer.primaryPhone.number }}</small>
+                                        </div>
+                                    {% elseif lawyer.phone %}
+                                        <div>
+                                            <i class="bi bi-telephone"></i>
+                                            <small>{{ lawyer.phone }}</small>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if lawyer.barNumber %}
+                                        <span class="badge bg-info">
+                                            {{ lawyer.barNumber }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        {% if is_granted('LAWYER_EDIT', lawyer) %}
+                                            <a href="{{ path('admin_lawyer_edit', {id: lawyer.id}) }}"
+                                               class="btn btn-outline-primary"
+                                               title="Modifier">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# Pagination simple #}
+        {% if page > 1 or lawyers|length >= 20 %}
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                {% if page > 1 %}
+                    <a href="{{ path('admin_lawyer_index', {page: page - 1, search: search}) }}"
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-chevron-left"></i>
+                        Page précédente
+                    </a>
+                {% else %}
+                    <div></div>
+                {% endif %}
+
+                <span class="text-muted">Page {{ page }}</span>
+
+                {% if lawyers|length >= 20 %}
+                    <a href="{{ path('admin_lawyer_index', {page: page + 1, search: search}) }}"
+                       class="btn btn-outline-secondary">
+                        Page suivante
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                {% else %}
+                    <div></div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h4 class="mt-3">Aucun avocat trouvé</h4>
+                {% if search %}
+                    <p class="text-muted">
+                        Aucun résultat pour "{{ search }}"
+                    </p>
+                    <a href="{{ path('admin_lawyer_index') }}" class="btn btn-outline-secondary">
+                        Voir tous les avocats
+                    </a>
+                {% else %}
+                    <p class="text-muted">
+                        {% if is_granted('ROLE_RESPO_CABINET') and not is_granted('ROLE_SUPER_ADMIN') %}
+                            Commencez par ajouter des avocats à votre cabinet
+                        {% else %}
+                            Commencez par créer votre premier avocat
+                        {% endif %}
+                    </p>
+                    <a href="{{ path('admin_lawyer_new') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i>
+                        Créer un avocat
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# Statistiques rapides #}
+    {% if lawyers|length > 0 %}
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h3 class="text-primary mb-0">{{ lawyers|length }}</h3>
+                        <small class="text-muted">Avocat(s) affiché(s)</small>
+                    </div>
+                </div>
+            </div>
+            {% if is_granted('ROLE_SUPER_ADMIN') %}
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-success mb-0">
+                                {{ lawyers|filter(l => l.cabinet is not null)|length }}
+                            </h3>
+                            <small class="text-muted">Rattaché(s) à un cabinet</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-warning mb-0">
+                                {{ lawyers|filter(l => l.cabinet is null)|length }}
+                            </h3>
+                            <small class="text-muted">Sans cabinet</small>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+{% endblock %}

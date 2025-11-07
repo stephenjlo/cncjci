@@ -23,10 +23,12 @@ class LawyerType extends AbstractType
         $builder
             ->add('firstName', TextType::class, [
                 'label' => 'Prénom',
+                'empty_data' => '',
                 'attr' => ['class' => 'form-control'],
             ])
             ->add('lastName', TextType::class, [
                 'label' => 'Nom',
+                'empty_data' => '',
                 'attr' => ['class' => 'form-control'],
             ])
             ->add('barNumber', TextType::class, [

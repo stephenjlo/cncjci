@@ -1,0 +1,488 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Mon Profil Avocat{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #address-map {
+            height: 400px;
+            margin-top: 1rem;
+            border-radius: 0.375rem;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-person-circle text-primary"></i>
+            Mon Profil Professionnel
+        </h1>
+        <a href="{{ path('admin_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Retour au tableau de bord
+        </a>
+    </div>
+
+    {# Message d'information #}
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i>
+        <strong>Modification de profil</strong>
+        <br>
+        <small>
+            Vous pouvez modifier vos informations personnelles et de contact.
+            Les informations sensibles (numéro au barreau, cabinet) ne peuvent être modifiées que par un administrateur.
+        </small>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            {{ form_start(form) }}
+
+            {# Informations personnelles #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-person-badge"></i>
+                    Informations Personnelles
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.firstName, {
+                                'label': 'Prénom',
+                                'attr': {'class': 'form-control', 'placeholder': 'Jean'}
+                            }) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.lastName, {
+                                'label': 'Nom',
+                                'attr': {'class': 'form-control', 'placeholder': 'KOUASSI'}
+                            }) }}
+                        </div>
+                    </div>
+
+                    {# Numéro au barreau (désactivé en self-edit) #}
+                    {% if form.barNumber is defined %}
+                        <div class="mb-3">
+                            {{ form_label(form.barNumber, 'Numéro au Barreau') }}
+                            {{ form_widget(form.barNumber, {
+                                'attr': {'class': 'form-control', 'readonly': true}
+                            }) }}
+                            <small class="form-text text-muted">
+                                <i class="bi bi-lock"></i>
+                                Ce champ ne peut être modifié que par un administrateur
+                            </small>
+                        </div>
+                    {% endif %}
+
+                    {{ form_row(form.biography, {
+                        'label': 'Biographie / Présentation',
+                        'attr': {'class': 'form-control', 'rows': '6', 'placeholder': 'Présentez votre parcours, vos domaines d\'expertise, vos expériences...'}
+                    }) }}
+
+                    {{ form_row(form.photoUrl, {
+                        'label': 'URL Photo de profil',
+                        'attr': {'class': 'form-control', 'placeholder': 'https://...'}
+                    }) }}
+                </div>
+            </div>
+
+            {# Spécialités #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-briefcase"></i>
+                    Spécialités Juridiques
+                </div>
+                <div class="card-body">
+                    {{ form_row(form.specialties, {
+                        'label': 'Vos spécialités',
+                        'attr': {'class': 'form-select', 'multiple': 'multiple', 'size': 8}
+                    }) }}
+                    <small class="form-text text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Maintenez Ctrl (ou Cmd sur Mac) pour sélectionner plusieurs spécialités
+                    </small>
+                </div>
+            </div>
+
+            {# Coordonnées #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-telephone"></i>
+                    Coordonnées de Contact
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-3">
+                        <i class="bi bi-telephone-fill text-primary"></i>
+                        Téléphones
+                    </h6>
+                    <div id="phones-collection"
+                         data-prototype="{{ form_widget(form.phones.vars.prototype)|e('html_attr') }}"
+                         class="mb-3">
+                        {% for phone in form.phones %}
+                            <div class="row mb-2 phone-item">
+                                <div class="col-md-3">
+                                    {{ form_widget(phone.label, {
+                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': 'Mobile'}
+                                    }) }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form_widget(phone.number, {
+                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': '+225 XX XX XX XX'}
+                                    }) }}
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        {{ form_widget(phone.isPrimary, {'attr': {'class': 'form-check-input'}}) }}
+                                        <label class="form-check-label small">Principal</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    {{ form_widget(phone.position, {
+                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': '0'}
+                                    }) }}
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-sm btn-danger remove-phone">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-phone">
+                        <i class="bi bi-plus-circle"></i>
+                        Ajouter un téléphone
+                    </button>
+
+                    <hr class="my-4">
+
+                    <h6 class="mb-3">
+                        <i class="bi bi-envelope-fill text-primary"></i>
+                        Emails
+                    </h6>
+                    <div id="emails-collection"
+                         data-prototype="{{ form_widget(form.emails.vars.prototype)|e('html_attr') }}"
+                         class="mb-3">
+                        {% for email in form.emails %}
+                            <div class="row mb-2 email-item">
+                                <div class="col-md-3">
+                                    {{ form_widget(email.label, {
+                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': 'Professionnel'}
+                                    }) }}
+                                </div>
+                                <div class="col-md-5">
+                                    {{ form_widget(email.email, {
+                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': 'email@example.com'}
+                                    }) }}
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        {{ form_widget(email.isPrimary, {'attr': {'class': 'form-check-input'}}) }}
+                                        <label class="form-check-label small">Principal</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-sm btn-danger remove-email">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-email">
+                        <i class="bi bi-plus-circle"></i>
+                        Ajouter un email
+                    </button>
+                </div>
+            </div>
+
+            {# Adresse #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-geo-alt"></i>
+                    Adresse Professionnelle
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        <i class="bi bi-info-circle"></i>
+                        Cliquez sur la carte pour définir votre localisation, ou utilisez la recherche dans le champ adresse.
+                    </p>
+
+                    {{ form_row(form.address) }}
+
+                    <div id="address-map"></div>
+                </div>
+            </div>
+
+            {# Boutons d'action #}
+            <div class="d-flex gap-2 mb-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i>
+                    Enregistrer mes modifications
+                </button>
+                <a href="{{ path('admin_dashboard') }}" class="btn btn-secondary btn-lg">
+                    <i class="bi bi-x-circle"></i>
+                    Annuler
+                </a>
+            </div>
+
+            {{ form_end(form) }}
+        </div>
+
+        {# Colonne latérale #}
+        <div class="col-lg-4">
+            {# Informations du profil #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-info-circle"></i>
+                    Informations
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">ID:</dt>
+                        <dd class="col-sm-7">{{ lawyer.id }}</dd>
+
+                        <dt class="col-sm-5">Slug:</dt>
+                        <dd class="col-sm-7">
+                            <code class="small">{{ lawyer.slug }}</code>
+                        </dd>
+
+                        {% if lawyer.cabinet %}
+                            <dt class="col-sm-5">Cabinet:</dt>
+                            <dd class="col-sm-7">
+                                <i class="bi bi-building text-primary"></i>
+                                {{ lawyer.cabinet.name }}
+                                {% if lawyer.cabinet.managingPartner and lawyer.cabinet.managingPartner.id == lawyer.id %}
+                                    <br>
+                                    <span class="badge bg-success mt-1">
+                                        <i class="bi bi-star"></i>
+                                        Responsable
+                                    </span>
+                                {% endif %}
+                            </dd>
+                        {% endif %}
+
+                        {% if lawyer.barNumber %}
+                            <dt class="col-sm-5">Barreau:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-info">{{ lawyer.barNumber }}</span>
+                            </dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            {# Prévisualisation #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-eye"></i>
+                    Prévisualisation
+                </div>
+                <div class="card-body text-center">
+                    {% if lawyer.photoUrl %}
+                        <img src="{{ lawyer.photoUrl }}"
+                             alt="{{ lawyer.fullName }}"
+                             class="img-fluid rounded-circle mb-3"
+                             style="max-width: 150px; max-height: 150px; object-fit: cover;">
+                    {% else %}
+                        <div class="bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                             style="width: 150px; height: 150px;">
+                            <i class="bi bi-person-circle text-muted" style="font-size: 5rem;"></i>
+                        </div>
+                    {% endif %}
+
+                    <h5 class="mb-1">{{ lawyer.fullName }}</h5>
+
+                    {% if lawyer.barNumber %}
+                        <p class="text-muted mb-2">
+                            <small>
+                                <i class="bi bi-card-text"></i>
+                                {{ lawyer.barNumber }}
+                            </small>
+                        </p>
+                    {% endif %}
+
+                    {% if lawyer.cabinet %}
+                        <p class="text-muted mb-2">
+                            <i class="bi bi-building"></i>
+                            {{ lawyer.cabinet.name }}
+                        </p>
+                    {% endif %}
+
+                    {% if lawyer.specialties|length > 0 %}
+                        <div class="mt-2">
+                            {% for specialty in lawyer.specialties|slice(0, 3) %}
+                                <span class="badge bg-secondary me-1">
+                                    {{ specialty.name }}
+                                </span>
+                            {% endfor %}
+                            {% if lawyer.specialties|length > 3 %}
+                                <span class="badge bg-light text-dark">
+                                    +{{ lawyer.specialties|length - 3 }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Conseils #}
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-lightbulb text-warning"></i>
+                        Conseils pour votre profil
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>Rédigez une biographie claire et professionnelle</li>
+                        <li>Ajoutez une photo de profil de qualité</li>
+                        <li>Renseignez vos spécialités pour être mieux référencé</li>
+                        <li>Vérifiez que vos coordonnées sont à jour</li>
+                        <li>Utilisez la carte pour localiser précisément votre cabinet</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ═══════════════════════════════════════════════════
+            // GESTION DES COLLECTIONS (Phones & Emails)
+            // ═══════════════════════════════════════════════════
+            function initCollection(collectionId, addButtonId, itemClass) {
+                const collection = document.getElementById(collectionId);
+                const addButton = document.getElementById(addButtonId);
+
+                if (!collection || !addButton) return;
+
+                // Ajout d'un élément
+                addButton.addEventListener('click', function() {
+                    const prototype = collection.dataset.prototype;
+                    const index = collection.children.length;
+                    const newForm = prototype.replace(/__name__/g, index);
+
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = newForm;
+                    collection.appendChild(wrapper.firstElementChild);
+                });
+
+                // Suppression d'un élément
+                collection.addEventListener('click', function(e) {
+                    const removeBtn = e.target.closest('.remove-phone, .remove-email');
+                    if (removeBtn) {
+                        const item = e.target.closest('.' + itemClass);
+                        if (item && confirm('Supprimer cet élément ?')) {
+                            item.remove();
+                        }
+                    }
+                });
+            }
+
+            initCollection('phones-collection', 'add-phone', 'phone-item');
+            initCollection('emails-collection', 'add-email', 'email-item');
+
+            // ═══════════════════════════════════════════════════
+            // CARTE OPENSTREETMAP
+            // ═══════════════════════════════════════════════════
+            const mapElement = document.getElementById('address-map');
+            if (mapElement) {
+                const latInput = document.querySelector('input[id$="_lat"]');
+                const lngInput = document.querySelector('input[id$="_lng"]');
+                const line1Input = document.querySelector('input[id$="_line1"]');
+                const cityInput = document.querySelector('input[id$="_city"]');
+
+                const initialLat = latInput && latInput.value ? parseFloat(latInput.value) : 5.345317;
+                const initialLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : -4.024429;
+
+                const map = L.map('address-map').setView([initialLat, initialLng], 12);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map);
+
+                let marker = null;
+
+                if (latInput.value && lngInput.value) {
+                    marker = L.marker([initialLat, initialLng]).addTo(map);
+                    map.setView([initialLat, initialLng], 15);
+                }
+
+                map.on('click', function(e) {
+                    const lat = e.latlng.lat;
+                    const lng = e.latlng.lng;
+
+                    latInput.value = lat;
+                    lngInput.value = lng;
+
+                    if (marker) {
+                        map.removeLayer(marker);
+                    }
+                    marker = L.marker([lat, lng]).addTo(map);
+
+                    // Géocodage inverse
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.address) {
+                                if (data.address.road && !line1Input.value) {
+                                    line1Input.value = data.address.road;
+                                }
+                                if (data.address.city && !cityInput.value) {
+                                    cityInput.value = data.address.city;
+                                } else if (data.address.town && !cityInput.value) {
+                                    cityInput.value = data.address.town;
+                                }
+                            }
+                        })
+                        .catch(err => console.error('Erreur géocodage inverse:', err));
+                });
+
+                // Recherche d'adresse
+                let searchTimeout;
+                if (line1Input) {
+                    line1Input.addEventListener('input', function() {
+                        clearTimeout(searchTimeout);
+                        const query = this.value;
+
+                        if (query.length < 3) return;
+
+                        searchTimeout = setTimeout(() => {
+                            const searchQuery = `${query}, ${cityInput.value || 'Abidjan'}, Côte d'Ivoire`;
+
+                            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`)
+                                .then(response => response.json())
+                                .then(results => {
+                                    if (results.length > 0) {
+                                        const result = results[0];
+                                        const lat = parseFloat(result.lat);
+                                        const lng = parseFloat(result.lon);
+
+                                        latInput.value = lat;
+                                        lngInput.value = lng;
+
+                                        if (marker) {
+                                            map.removeLayer(marker);
+                                        }
+                                        marker = L.marker([lat, lng]).addTo(map);
+                                        map.setView([lat, lng], 15);
+                                    }
+                                })
+                                .catch(err => console.error('Erreur recherche:', err));
+                        }, 1000);
+                    });
+                }
+            }
+        });
+    </script>
+{% endblock %}

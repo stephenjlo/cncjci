@@ -175,16 +175,15 @@
                 </div>
                 <div class="card-body">
                     <dl class="row mb-0">
+                        {% if lawyer.id %}
                         <dt class="col-sm-4">ID:</dt>
-                        <dd class="col-sm-8">{{ lawyer.id }}</dd>
+                        <dd class="col-sm-8">#{{ lawyer.id }}</dd>
+                        {% endif %}
 
                         <dt class="col-sm-4">Slug:</dt>
                         <dd class="col-sm-8">
-                            <code>{{ lawyer.slug }}</code>
+                            <code>{{ lawyer.slug ?: 'Non généré' }}</code>
                         </dd>
-
-                        <dt class="col-sm-4">Créé le:</dt>
-                        <dd class="col-sm-8">{{ lawyer.createdAt|date('d/m/Y') }}</dd>
                     </dl>
                 </div>
             </div>

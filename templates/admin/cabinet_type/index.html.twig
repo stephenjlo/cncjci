@@ -1,0 +1,101 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Gestion des Types de Cabinet{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-tag text-primary"></i>
+            Types de Cabinet
+        </h1>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-list-ul"></i>
+                    Liste des types ({{ types|length }})
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Slug</th>
+                                <th style="width: 100px;" class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for type in types %}
+                                <tr>
+                                    <td><strong>{{ type.name }}</strong></td>
+                                    <td><code>{{ type.slug }}</code></td>
+                                    <td class="text-center">
+                                        <form method="post"
+                                              action="{{ path('admin_cabinet_type_delete', {id: type.id}) }}"
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Supprimer ce type ?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        Aucun type de cabinet
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-plus-circle"></i>
+                    Ajouter un type
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ path('admin_cabinet_type_new') }}">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Nom du type</label>
+                            <input type="text"
+                                   name="name"
+                                   id="name"
+                                   class="form-control"
+                                   placeholder="Ex: SCP, SCPA, SELAFA"
+                                   required>
+                            <small class="form-text text-muted">
+                                Le slug sera généré automatiquement
+                            </small>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-check-circle"></i>
+                            Créer
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-3 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        Information
+                    </h6>
+                    <p class="small mb-0">
+                        Les types de cabinets sont utilisés pour catégoriser les cabinets juridiques.
+                        Exemples : Cabinet, SCP, SCPA, SELAFA, etc.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

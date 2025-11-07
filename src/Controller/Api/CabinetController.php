@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\Cabinet;
 use App\Repository\CabinetRepository;
 use App\Repository\LawyerRepository;
+use App\Service\FileUploadService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,7 +18,8 @@ class CabinetController extends AbstractController
 {
     public function __construct(
         private CabinetRepository $repo,
-        private LawyerRepository $lawyers
+        private LawyerRepository $lawyers,
+        private FileUploadService $fileUploadService
     ) {}
 
     #[Route('', methods: ['GET'])]
@@ -74,6 +76,11 @@ class CabinetController extends AbstractController
             $typeData = ['id' => null, 'name' => (string)$type, 'slug' => null];
         }
 
+        $logoUrl = $cabinet->getLogoUrl();
+        if (empty($logoUrl)) {
+            $logoUrl = $this->fileUploadService->getDefaultCabinetLogo();
+        }
+
         return [
             'id'      => $cabinet->getId(),
             'name'    => $cabinet->getName(),
@@ -83,7 +90,7 @@ class CabinetController extends AbstractController
             'email'   => $cabinet->getEmail(),
             'phone'   => $cabinet->getPhone(),
             'website' => $cabinet->getWebsite(),
-            'logoUrl' => $cabinet->getLogoUrl(),
+            'logoUrl' => $logoUrl,
         ];
     }
 
@@ -205,6 +212,11 @@ class CabinetController extends AbstractController
             'photoUrl'  => $l->getPhotoUrl(),
         ], $lawyersCollection);
 
+        $logoUrl = $cabinet->getLogoUrl();
+        if (empty($logoUrl)) {
+            $logoUrl = $this->fileUploadService->getDefaultCabinetLogo();
+        }
+
         return [
             'id'          => $cabinet->getId(),
             'name'        => $cabinet->getName(),
@@ -212,6 +224,7 @@ class CabinetController extends AbstractController
             'type'        => $typeData,
             'website'     => $cabinet->getWebsite(),
             'description' => $cabinet->getDescription(),
+            'logoUrl'     => $logoUrl,
             'address'     => $address,
             'lat'         => $cabinet->getLat(),
             'lng'         => $cabinet->getLng(),

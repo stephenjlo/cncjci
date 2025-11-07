@@ -36,6 +36,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private bool $isActive = true;
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $mustChangePassword = false;
+
     /**
      * @var Lawyer|null Si c'est un lawyer, référence vers son profil
      */
@@ -181,5 +184,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isLawyer(): bool
     {
         return in_array('ROLE_LAWYER', $this->roles, true);
+    }
+
+    public function mustChangePassword(): bool
+    {
+        return $this->mustChangePassword;
+    }
+
+    public function setMustChangePassword(bool $mustChangePassword): self
+    {
+        $this->mustChangePassword = $mustChangePassword;
+        return $this;
     }
 }

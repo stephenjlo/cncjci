@@ -15,10 +15,10 @@ class Cabinet
     private ?int $id = null;
 
     #[ORM\Column(length:180)]
-    private string $name;
+    private string $name = '';
 
     #[ORM\Column(length:180, unique:true)]
-    private string $slug;
+    private string $slug = '';
 
     #[ORM\Column(length:255, nullable:true)]
     private ?string $website = null;
@@ -53,7 +53,7 @@ class Cabinet
     /**
      * @var Address|null Adresse complète du cabinet
      */
-    #[ORM\ManyToOne(targetEntity: Address::class)]
+    #[ORM\ManyToOne(targetEntity: Address::class, cascade: ['persist'])]
     #[ORM\JoinColumn(name: 'address_id', referencedColumnName: 'id', nullable: true)]
     private ?Address $address = null;
 

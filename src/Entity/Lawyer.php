@@ -15,13 +15,13 @@ class Lawyer
     private ?int $id = null;
 
     #[ORM\Column(length:120)]
-    private string $firstName;
+    private string $firstName = '';
 
     #[ORM\Column(length:120)]
-    private string $lastName;
+    private string $lastName = '';
 
     #[ORM\Column(length:150, unique:true)]
-    private string $slug;
+    private string $slug = '';
 
     #[ORM\Column(length:50, nullable:true)]
     private ?string $barNumber = null;
@@ -39,7 +39,7 @@ class Lawyer
     /**
      * @var Address|null Adresse complète de l'avocat
      */
-    #[ORM\ManyToOne(targetEntity: Address::class)]
+    #[ORM\ManyToOne(targetEntity: Address::class, cascade: ['persist'])]
     #[ORM\JoinColumn(name: 'address_id', referencedColumnName: 'id', nullable: true)]
     private ?Address $address = null;
 
