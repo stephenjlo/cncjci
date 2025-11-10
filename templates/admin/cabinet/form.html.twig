@@ -340,6 +340,22 @@
                     }
                 }
             });
+
+            // SELECT2 pour le champ responsable (managingPartner)
+            $('#cabinet_managingPartner').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Rechercher un responsable...',
+                allowClear: true,
+                language: {
+                    noResults: function() {
+                        return "Aucun avocat trouvé";
+                    },
+                    searching: function() {
+                        return "Recherche en cours...";
+                    }
+                }
+            });
             // ═══════════════════════════════════════════════════
             // GESTION DES COLLECTIONS (Phones & Emails)
             // ═══════════════════════════════════════════════════

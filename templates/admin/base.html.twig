@@ -160,6 +160,23 @@
                 border-color: var(--primary-color);
                 box-shadow: 0 0 0 0.25rem rgba(255, 121, 0, 0.25);
             }
+
+            /* Style pour les messages d'aide des formulaires */
+            .form-text.text-info,
+            .form-help-info {
+                color: #dc3545 !important;
+                font-size: 0.875rem;
+                display: flex;
+                align-items: start;
+                gap: 0.25rem;
+                margin-top: 0.25rem;
+            }
+
+            .form-text.text-info i,
+            .form-help-info i {
+                flex-shrink: 0;
+                margin-top: 0.125rem;
+            }
         </style>
     {% endblock %}
 </head>
@@ -278,6 +295,9 @@
         </main>
     </div>
 </div>
+
+{# jQuery (required for Select2 and DataTables) #}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 {# Bootstrap JS #}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

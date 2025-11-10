@@ -12,7 +12,8 @@ class FileUploadService
 
     public function __construct(
         private string $uploadsDirectory,
-        private SluggerInterface $slugger
+        private SluggerInterface $slugger,
+        private ?string $baseUrl = null
     ) {}
 
     /**
@@ -45,10 +46,16 @@ class FileUploadService
             throw new FileException('Erreur lors de l\'upload du fichier: ' . $e->getMessage());
         }
 
-        // Retourner l'URL complète
-        // Note: Vous devrez configurer le baseUrl dans services.yaml
+        // Retourner l'URL complète (absolue si baseUrl est défini, relative sinon)
         $relativePath = ($subfolder ? $subfolder . '/' : '') . $newFilename;
-        return '/uploads/' . $relativePath;
+        $url = '/uploads/' . $relativePath;
+
+        // Si baseUrl est défini, retourner l'URL absolue pour l'API
+        if ($this->baseUrl) {
+            return rtrim($this->baseUrl, '/') . $url;
+        }
+
+        return $url;
     }
 
     /**
@@ -86,5 +93,30 @@ class FileUploadService
     public function getDefaultLawyerPhoto(): ?string
     {
         return self::DEFAULT_LAWYER_PHOTO;
+    }
+
+    /**
+     * Convertit une URL relative en URL absolue pour l'API
+     *
+     * @param string|null $url L'URL relative ou absolue
+     * @return string|null L'URL absolue ou null
+     */
+    public function getAbsoluteUrl(?string $url): ?string
+    {
+        if (!$url) {
+            return null;
+        }
+
+        // Si l'URL est déjà absolue (commence par http:// ou https://), la retourner telle quelle
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        // Sinon, ajouter le baseUrl si défini
+        if ($this->baseUrl && str_starts_with($url, '/')) {
+            return rtrim($this->baseUrl, '/') . $url;
+        }
+
+        return $url;
     }
 }

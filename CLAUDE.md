@@ -1,1042 +1,1016 @@
-# CLAUDE.MD - Documentation Projet CNCJCI
+# ANALYSE PROJET CNCJCI - Application Symfony
 
-## 📋 INFORMATIONS GÉNÉRALES
+## 📋 TABLE DES MATIÈRES
 
-**Nom du projet** : CNCJCI - Annuaire Juridique de Côte d'Ivoire
-**Type** : Application Symfony 6.4 (API + Back-office)
-**Date de création** : 2025-11
-**Dernière mise à jour** : 2025-11-06
+1. [Contexte du Projet](#contexte-du-projet)
+2. [Architecture et Technologies](#architecture-et-technologies)
+3. [État Actuel du Projet](#état-actuel-du-projet)
+4. [Points Fonctionnels Validés](#points-fonctionnels-validés)
+5. [Problèmes Identifiés](#problèmes-identifiés)
+6. [Plan d'Implémentation](#plan-dimplémentation)
+   - [Phase 1 : Cabinet](#phase-1--cabinet)
+   - [Phase 2 : Lawyer](#phase-2--lawyer)
 
 ---
 
-## 🎯 OBJECTIF DU PROJET
+## 🎯 CONTEXTE DU PROJET
 
-Application double volet pour la gestion d'un annuaire juridique ivoirien :
+### Vue d'ensemble
+Application Symfony 6.4 avec deux volets principaux :
+- **API publique** : Exposition des données pour un frontend (liste des cabinets juridiques et avocats)
+- **Back-office** : Gestion des données par différents acteurs avec des droits spécifiques
 
-### 1. **API Publique**
-- Exposition des données pour un frontend
-- Liste des avocats (lawyers) avec leurs cabinets associés
-- Liste des cabinets avec responsable et ensemble des avocats
-- Liste des spécialités juridiques
+### Objectifs métier
+1. **Afficher** la liste des personnels juridiques (lawyers) et leurs cabinets associés
+2. **Afficher** la liste des cabinets avec leur responsable et l'ensemble des avocats
+3. **Gérer** ces données via un back-office sécurisé selon 3 profils utilisateurs
 
-### 2. **Back-office d'Administration**
-Gestion des données selon 3 niveaux de droits :
+### Acteurs du système
 
-#### SUPER_ADMIN
-- Créer, modifier, détails des cabinets juridiques
-- Rattacher les lawyers aux cabinets
-- Désigner le responsable du cabinet
-- Créer, modifier, détails des conseillers juridiques (lawyers)
-- Rattacher les lawyers à un cabinet
+#### 1. SUPER_ADMIN
+- Créer, modifier, consulter les cabinets juridiques
+- Rattacher des lawyers aux cabinets
+- Désigner le responsable d'un cabinet
+- Créer, modifier, consulter les lawyers
+- Rattacher les lawyers à un cabinet (lors de la création ou modification)
 
-#### RESPO_CABINET (Responsable de Cabinet)
-- Créer, modifier, détails des lawyers
+#### 2. RESPO_CABINET (Responsable de Cabinet)
+- Créer, modifier, consulter les lawyers
 - Rattacher les lawyers **uniquement à son propre cabinet**
-- Ne peut PAS modifier les lawyers d'autres cabinets
+- Ne peut pas gérer d'autres cabinets
 
-#### LAWYER (Avocat)
-- Modifier uniquement les informations non-sensibles de son profil
-- Ne peut pas modifier : cabinet, numéro au barreau, etc.
+#### 3. LAWYER (Avocat)
+- Modifier **uniquement son profil personnel** (informations non sensibles)
+- Ne peut pas modifier son cabinet de rattachement
+- Ne peut pas modifier son numéro au barreau
 
 ---
 
-## 🏗️ ARCHITECTURE TECHNIQUE
+## 🏗️ ARCHITECTURE ET TECHNOLOGIES
 
-### Stack Technologique
+### Stack technique
 - **Framework** : Symfony 6.4
-- **PHP** : >= 8.1
+- **PHP** : ≥ 8.1
 - **ORM** : Doctrine ORM 3.5
-- **Base de données** : Non spécifiée (MySQL/PostgreSQL recommandé)
-- **Frontend Admin** : Twig + Bootstrap 5.3 + Bootstrap Icons
-- **Cartographie** : Leaflet.js + OpenStreetMap (Nominatim)
+- **Base de données** : Configuration via Doctrine DBAL 3
+- **Templating** : Twig 2/3
+- **Sécurité** : Symfony Security Bundle
+- **CORS** : Nelmio CORS Bundle
+- **Frontend** : Bootstrap 5, Select2, Leaflet (OpenStreetMap)
 
-### Structure des Dossiers
+### Structure du projet
 ```
 src/
 ├── Controller/
-│   ├── Admin/
-│   │   ├── DashboardController.php
-│   │   ├── CabinetAdminController.php
-│   │   └── LawyerAdminController.php
-│   ├── Api/
+│   ├── Api/                      # Contrôleurs API publics
 │   │   ├── CabinetController.php
 │   │   ├── LawyerController.php
 │   │   └── SpecialtyController.php
-│   └── LoginController.php
-├── Entity/
-│   ├── User.php
+│   └── Admin/                    # Contrôleurs Back-office
+│       ├── CabinetAdminController.php
+│       ├── LawyerAdminController.php
+│       ├── DashboardController.php
+│       └── ...
+├── Entity/                       # Entités Doctrine
 │   ├── Cabinet.php
 │   ├── Lawyer.php
+│   ├── User.php
 │   ├── Address.php
 │   ├── Phone.php
 │   ├── EmailAddress.php
-│   ├── Specialty.php
-│   └── CabinetType.php
-├── Form/
+│   ├── CabinetType.php
+│   └── Specialty.php
+├── Form/                         # Formulaires Symfony
+│   ├── CabinetType.php
 │   ├── LawyerType.php
 │   ├── AddressType.php
 │   ├── PhoneType.php
 │   └── EmailAddressType.php
-├── Repository/
-└── Security/
-    └── Voter/
-        ├── LawyerVoter.php
-        └── CabinetVoter.php
+├── Security/
+│   └── Voter/                    # Voters pour les permissions
+│       ├── CabinetVoter.php
+│       └── LawyerVoter.php
+├── Service/                      # Services métier
+│   ├── UserCreationService.php
+│   └── FileUploadService.php
+└── EventSubscriber/              # Event Subscribers
+    ├── MustChangePasswordSubscriber.php
+    └── AddressValidationSubscriber.php
+
+templates/
+└── admin/                        # Templates Twig back-office
+    ├── base.html.twig
+    ├── dashboard.html.twig
+    ├── _osm_address_map.html.twig
+    ├── cabinet/
+    │   ├── index.html.twig
+    │   ├── form.html.twig
+    │   └── lawyers.html.twig
+    └── lawyer/
+        ├── index.html.twig
+        ├── form.html.twig
+        └── profile.html.twig
 ```
 
 ---
 
-## 📊 MODÈLE DE DONNÉES
+## ✅ ÉTAT ACTUEL DU PROJET
 
-### Entités Principales
+### Modèle de données
 
-#### **User** (Authentification)
-```
-- id: int
-- email: string (unique)
-- password: string (hashé)
-- roles: array
-- firstName: string
-- lastName: string
-- isActive: bool
-- lawyer: ?Lawyer (OneToOne)
-- cabinet: ?Cabinet (ManyToOne - pour RESPO_CABINET)
-```
+#### Entité Cabinet
+**Champs principaux :**
+- `id`, `name`, `slug`, `website`, `description`, `logoUrl`, `isActive`
+- `typeEntity` (ManyToOne → CabinetType) : Type de cabinet (Cabinet, SCP, SCPA)
+- `managingPartner` (ManyToOne → Lawyer) : Responsable du cabinet
+- `address` (ManyToOne → Address) : Adresse complète
+- `phones` (OneToMany → Phone) : Collection de téléphones
+- `emails` (OneToMany → EmailAddress) : Collection d'emails
+- `lawyers` (OneToMany → Lawyer) : Avocats rattachés
 
-**Rôles disponibles** :
-- `ROLE_USER` : Rôle de base
-- `ROLE_LAWYER` : Avocat
-- `ROLE_RESPO_CABINET` : Responsable de cabinet
-- `ROLE_SUPER_ADMIN` : Super administrateur
+**Champs dépréciés (compatibilité) :**
+- `type`, `email`, `phone`, `oldAddress`, `city`, `lat`, `lng`
 
-**Hiérarchie** :
-```
-ROLE_SUPER_ADMIN → [ROLE_ADMIN, ROLE_RESPO_CABINET, ROLE_LAWYER, ROLE_USER]
-ROLE_RESPO_CABINET → [ROLE_LAWYER, ROLE_USER]
-ROLE_LAWYER → ROLE_USER
-```
+#### Entité Lawyer
+**Champs principaux :**
+- `id`, `firstName`, `lastName`, `slug`, `barNumber`, `biography`, `photoUrl`
+- `cabinet` (ManyToOne → Cabinet) : Cabinet de rattachement
+- `address` (ManyToOne → Address) : Adresse complète
+- `phones` (OneToMany → Phone) : Collection de téléphones
+- `emails` (OneToMany → EmailAddress) : Collection d'emails
+- `specialties` (ManyToMany → Specialty) : Spécialités juridiques
 
-#### **Cabinet**
-```
-- id: int
-- name: string
-- slug: string (unique)
-- website: ?string
-- description: ?text
-- logoUrl: ?string
-- isActive: bool
-- typeEntity: ?CabinetType (ManyToOne)
-- managingPartner: ?Lawyer (ManyToOne)
-- address: ?Address (ManyToOne)
-- phones: Collection<Phone> (OneToMany)
-- emails: Collection<EmailAddress> (OneToMany)
-- lawyers: Collection<Lawyer> (OneToMany)
+**Champs dépréciés (compatibilité) :**
+- `email`, `phone`, `city`
 
-Champs deprecated (compatibilité) :
-- type: string
-- email: ?string
-- phone: ?string
-- oldAddress: ?string
-- city: ?string
-- lat: ?float
-- lng: ?float
-```
+#### Entité User
+**Champs :**
+- `id`, `email` (login), `password`, `roles[]`, `firstName`, `lastName`
+- `isActive` : Statut du compte
+- `mustChangePassword` : Force le changement de mot de passe à la première connexion
+- `lawyer` (OneToOne → Lawyer) : Profil lawyer associé (si c'est un lawyer)
+- `cabinet` (ManyToOne → Cabinet) : Cabinet associé (si RESPO_CABINET)
 
-#### **Lawyer**
-```
-- id: int
-- firstName: string
-- lastName: string
-- slug: string (unique)
-- barNumber: ?string (numéro au barreau)
-- biography: ?text
-- photoUrl: ?string
-- address: ?Address (ManyToOne)
-- cabinet: ?Cabinet (ManyToOne)
-- phones: Collection<Phone> (OneToMany)
-- emails: Collection<EmailAddress> (OneToMany)
-- specialties: Collection<Specialty> (ManyToMany)
-
-Champs deprecated (compatibilité) :
-- email: ?string
-- phone: ?string
-- city: ?string
-```
-
-#### **Address** (Adresse géolocalisée)
-```
-- id: int
-- line1: ?string
-- line2: ?string
-- city: ?string
-- postalCode: ?string
-- country: ?string (défaut: "Côte d'Ivoire")
-- lat: ?float (latitude OpenStreetMap)
-- lng: ?float (longitude OpenStreetMap)
-```
-
-#### **Phone**
-```
-- id: int
-- label: ?string (ex: "Bureau", "Mobile")
-- number: string
-- isPrimary: bool
-- position: int
-- lawyer: ?Lawyer
-- cabinet: ?Cabinet
-```
-
-#### **EmailAddress**
-```
-- id: int
-- label: ?string (ex: "Professionnel", "Contact")
-- email: string
-- isPrimary: bool
-- position: int
-- lawyer: ?Lawyer
-- cabinet: ?Cabinet
-```
-
-#### **Specialty** (Spécialités juridiques)
-```
-- id: int
-- name: string
-- slug: string (unique)
-- description: ?text
-```
-
-#### **CabinetType** (Type de cabinet)
-```
-- id: int
-- name: string (unique)
-- slug: string (unique)
-
-Exemples: "Cabinet", "SCP", "SCPA", "SELAFA"
-```
-
----
-
-## 🔐 SÉCURITÉ
-
-### Configuration (security.yaml)
-
-**Firewalls** :
-- `dev` : Désactivé pour profiler/debug
-- `main` : Form login avec CSRF, logout configuré
-
-**Access Control** :
+#### Hiérarchie des rôles (security.yaml)
 ```yaml
-- /api/** : PUBLIC_ACCESS
-- /login : PUBLIC_ACCESS
-- /admin/lawyers/me : ROLE_LAWYER
-- /admin/lawyers : ROLE_RESPO_CABINET
-- /admin/cabinets : ROLE_SUPER_ADMIN
-- /admin : ROLE_USER
+role_hierarchy:
+  ROLE_LAWYER: ROLE_USER
+  ROLE_RESPO_CABINET: [ROLE_USER, ROLE_LAWYER]
+  ROLE_SUPER_ADMIN: [ROLE_USER, ROLE_LAWYER, ROLE_RESPO_CABINET, ROLE_ADMIN]
 ```
 
-### Voters (Permissions granulaires)
+### Sécurité et Contrôle d'accès
 
-#### **LawyerVoter**
-- `LAWYER_VIEW` : Tout le monde
-- `LAWYER_EDIT` :
-  - SUPER_ADMIN : tous les lawyers
-  - RESPO_CABINET : lawyers de son cabinet uniquement
-  - LAWYER : son propre profil uniquement
-- `LAWYER_DELETE` :
-  - SUPER_ADMIN : tous
-  - RESPO_CABINET : lawyers de son cabinet
+#### Access Control (security.yaml)
+```yaml
+access_control:
+  - { path: ^/api, roles: PUBLIC_ACCESS }           # API publique
+  - { path: ^/login, roles: PUBLIC_ACCESS }         # Page de login
+  - { path: ^/admin/lawyers/me, roles: ROLE_LAWYER }
+  - { path: ^/admin/lawyers, roles: ROLE_RESPO_CABINET }
+  - { path: ^/admin/cabinets, roles: ROLE_SUPER_ADMIN }
+  - { path: ^/admin, roles: ROLE_USER }
+```
 
-#### **CabinetVoter**
-- `CABINET_VIEW` : Tout le monde
-- `CABINET_EDIT` :
-  - SUPER_ADMIN : tous les cabinets
-  - RESPO_CABINET : son propre cabinet uniquement
+#### Voters implémentés
+
+**CabinetVoter** (src/Security/Voter/CabinetVoter.php:9)
+- `CABINET_VIEW` : Tous les utilisateurs connectés
+- `CABINET_EDIT` : SUPER_ADMIN ou RESPO_CABINET (son propre cabinet uniquement)
 - `CABINET_DELETE` : SUPER_ADMIN uniquement
-- `CABINET_MANAGE_LAWYERS` :
-  - SUPER_ADMIN : tous
-  - RESPO_CABINET : son cabinet uniquement
-
----
-
-## 🛣️ ROUTES
-
-### API Publique
-```
-GET /api/lawyers - Liste des avocats
-GET /api/cabinets - Liste des cabinets
-GET /api/specialties - Liste des spécialités
-```
-
-### Back-office Admin
-```
-GET  /login - Page de connexion
-POST /login - Authentification
-GET  /logout - Déconnexion
-
-GET  /admin - Dashboard principal
-
-# Cabinets (SUPER_ADMIN)
-GET  /admin/cabinets - Liste
-GET  /admin/cabinets/new - Formulaire création
-POST /admin/cabinets/new - Enregistrement
-GET  /admin/cabinets/{id}/edit - Formulaire édition
-POST /admin/cabinets/{id}/edit - Mise à jour
-POST /admin/cabinets/{id}/toggle - Activer/Désactiver
-
-# Lawyers (RESPO_CABINET+)
-GET  /admin/lawyers - Liste
-GET  /admin/lawyers/new - Formulaire création
-POST /admin/lawyers/new - Enregistrement
-GET  /admin/lawyers/{id}/edit - Formulaire édition
-POST /admin/lawyers/{id}/edit - Mise à jour
-
-# Profil Lawyer (ROLE_LAWYER)
-GET  /admin/lawyers/me - Mon profil
-POST /admin/lawyers/me - Mise à jour profil
-```
-
----
-
-## 📝 FORMULAIRES
-
-### **LawyerType** ✅ (Complet)
-- Champs : firstName, lastName, barNumber, biography, photoUrl
-- Cabinet : Sélection (désactivée pour RESPO_CABINET, pré-rempli avec son cabinet)
-- Spécialités : Multi-select
-- Collections : phones (PhoneType), emails (EmailAddressType)
-- Adresse : AddressType avec carte interactive
-
-**Options** :
-- `user` : Utilisateur courant (pour restrictions)
-- `self_edit` : Mode auto-édition (champs sensibles désactivés)
-
-### **AddressType** ✅ (Complet)
-- line1, line2, city, postalCode, country
-- lat, lng (hidden, remplis par carte OpenStreetMap)
-- Autocomplete OpenStreetMap sur line1
-
-### **PhoneType** (Existe, détails non analysés)
-### **EmailAddressType** (Existe, détails non analysés)
-### **CabinetType** ✅ (Complet)
-- Champs : name, slug, typeEntity, website, description, logoUrl
-- Cabinet : Sélection du type (EntityType → CabinetType)
-- Responsable : Sélection du managingPartner (seulement lawyers du cabinet)
-- Collections : phones (PhoneType), emails (EmailAddressType)
-- Adresse : AddressType avec carte OpenStreetMap interactive
-
-**Particularités** :
-- Le champ managingPartner n'est disponible qu'en édition (cabinet déjà créé)
-- Query builder filtré pour afficher uniquement les lawyers du cabinet concerné
-
----
-
-## 🎨 TEMPLATES TWIG
-
-### Existants ✅
-- `templates/base.html.twig` : Base générale
-- `templates/admin/base.html.twig` : Base admin
-- `templates/security/login.html.twig` : Page de connexion
-- `templates/admin/dashboard.html.twig` : Dashboard (incomplet - stats manquantes)
-- `templates/admin/cabinet/index.html.twig` : Liste des cabinets avec recherche et pagination
-- `templates/admin/cabinet/form.html.twig` : Formulaire cabinet avec carte OSM
-- `templates/admin/lawyer/index.html.twig` : Liste des avocats avec recherche, pagination et statistiques
-- `templates/admin/lawyer/form.html.twig` : Formulaire lawyer complet avec carte OSM
-- `templates/admin/lawyer/profile.html.twig` : Formulaire profil lawyer (champs limités)
-
-### Manquants ❌
-Aucun template critique manquant !
-
----
-
-## ⚠️ PROBLÈMES IDENTIFIÉS
-
-### CRITIQUES 🔴
-
-1. ~~**Formulaire CabinetType manquant**~~ ✅ **RÉSOLU**
-   - ~~Fichier `src/Form/CabinetType.php` n'existe pas~~
-   - ✅ Créé le 2025-11-06
-
-2. ~~**Templates Cabinet manquants**~~ ✅ **RÉSOLU**
-   - ~~Impossible de lister/créer/modifier les cabinets~~
-   - ✅ Templates index.html.twig et form.html.twig créés
-
-3. ~~**Templates Lawyer index/profile manquants**~~ ✅ **RÉSOLU**
-   - ~~Liste des avocats non affichable~~
-   - ~~Profil lawyer non éditable~~
-   - ✅ Templates index.html.twig et profile.html.twig créés
-
-4. ~~**Route par défaut manquante**~~ ✅ **RÉSOLU**
-   - ~~`/` ne redirige nulle part~~
-   - ✅ Route `/` configurée pour rediriger vers `/admin`
-
-5. ~~**Dashboard incomplet**~~ ✅ **RÉSOLU**
-   - ~~Variables `stats`, `lastActivity` non calculées~~
-   - ✅ Statistiques dynamiques implémentées pour SUPER_ADMIN et RESPO_CABINET
-   - ✅ Calcul automatique des totaux cabinets/avocats
-
-### MOYENS 🟡
-
-6. **Gestion des utilisateurs absente**
-   - Impossible de créer des comptes User
-   - Pas de CRUD pour User
-   - Pas de changement de mot de passe
-
-7. ~~**Intégration OpenStreetMap partielle**~~ ✅ **RÉSOLU**
-   - ~~Pas d'autocomplete UI visible~~
-   - ✅ Recherche automatique d'adresse fonctionnelle
-   - ✅ Géocodage inverse implémenté
-   - ✅ Carte interactive avec marqueur cliquable lors de la recherche
-
-8. **Pas de gestion des CabinetType et Specialty**
-   - Données en dur dans la base
-   - Pas d'interface admin pour gérer
-
----
-
-## 🚀 PLAN DE FINALISATION
-
-### ✅ ÉTAT ACTUEL (2025-11-06)
-- Architecture Doctrine complète
-- Sécurité et Voters fonctionnels
-- API publique opérationnelle
-- Formulaire LawyerType complet avec carte OSM
-- Login/Logout fonctionnels
-- Controllers Admin créés
-
-### 🔄 EN COURS
-- Analyse complète du projet terminée
-- Documentation CLAUDE.md créée
-
-### 📋 À FAIRE (Par priorité)
-
-#### PHASE 1 : Compléter CRUD Cabinet ✅ **TERMINÉE** (2025-11-06)
-- [x] Créer `src/Form/CabinetType.php`
-- [x] Créer `templates/admin/cabinet/index.html.twig`
-- [x] Créer `templates/admin/cabinet/form.html.twig`
-- [x] Tester création/modification de cabinets
-
-#### PHASE 2 : Compléter CRUD Lawyer ✅ **TERMINÉE** (2025-11-06)
-- [x] Créer `templates/admin/lawyer/index.html.twig`
-- [x] Créer `templates/admin/lawyer/profile.html.twig`
-- [x] Tester création/modification/profil lawyers
-
-#### PHASE 3 : Route par défaut et Dashboard ✅ **TERMINÉE** (2025-11-06)
-- [x] Ajouter route `/` → `/admin` dans `config/routes.yaml`
-- [x] Implémenter calcul des statistiques dans `DashboardController`
-- [x] Tester affichage du dashboard
-
-#### PHASE 4 : Gestion des Utilisateurs (MOYENNE PRIORITÉ)
-- [ ] Créer `src/Controller/Admin/UserAdminController.php`
-- [ ] Créer `src/Form/UserType.php`
-- [ ] Créer `templates/admin/user/index.html.twig`
-- [ ] Créer `templates/admin/user/form.html.twig`
-- [ ] Ajouter page changement de mot de passe
-
-#### PHASE 5 : Améliorations UX (BASSE PRIORITÉ)
-- [ ] Améliorer autocomplete OpenStreetMap avec dropdown
-- [ ] Ajouter validation coordonnées GPS
-- [ ] Créer CRUD pour CabinetType
-- [ ] Créer CRUD pour Specialty
-
----
-
-## 📚 RÉFÉRENCES TECHNIQUES
-
-### Dépendances Principales
-```json
-"symfony/framework-bundle": "6.4.*",
-"symfony/security-bundle": "6.4.*",
-"symfony/twig-bundle": "6.4.*",
-"symfony/form": "6.4.*",
-"symfony/validator": "6.4.*",
-"doctrine/orm": "^3.5",
-"doctrine/doctrine-bundle": "^2.16",
-"nelmio/cors-bundle": "^2.5"
-```
-
-### Services OpenStreetMap
-- **Nominatim Search** : `https://nominatim.openstreetmap.org/search`
-- **Nominatim Reverse** : `https://nominatim.openstreetmap.org/reverse`
-- **Leaflet.js** : `https://unpkg.com/leaflet@1.9.4/dist/leaflet.js`
-
----
-
-## 📝 NOTES DE DÉVELOPPEMENT
-
-### Conventions de Code
-- PSR-4 autoloading
-- Entités avec attributs PHP 8.1 (`#[ORM\...]`)
-- Controllers avec attributs de routing (`#[Route(...)]`)
-- Security avec `#[IsGranted(...)]`
-
-### Particularités du Projet
-- **Migration progressive** : Champs deprecated conservés pour compatibilité
-- **Collections multiples** : Phones/Emails avec isPrimary et position
-- **Géolocalisation** : Coordonnées GPS stockées pour chaque adresse
-- **Slugs automatiques** : Pour Cabinet, Lawyer, Specialty (génération à implémenter)
-
-### Points d'Attention
-- Vérifier que le managingPartner d'un Cabinet appartient bien à ce Cabinet
-- Ne pas permettre à RESPO_CABINET de modifier les lawyers d'autres cabinets
-- Valider que lat/lng sont bien renseignés si adresse saisie
-- Gérer les téléphones/emails primaires (un seul primary par entité)
-
----
-
-## 🔄 HISTORIQUE DES MODIFICATIONS
-
-### 2025-11-06 - Analyse initiale
-**Analyste** : Claude Code
-**Actions** :
-- Analyse complète de l'architecture
-- Identification des éléments manquants
-- Création du plan de finalisation
-- Création de ce fichier CLAUDE.md
-
-**Fichiers analysés** :
-- Toutes les entités (User, Cabinet, Lawyer, Address, Phone, EmailAddress, Specialty, CabinetType)
-- Tous les contrôleurs (Admin et API)
-- Formulaires (LawyerType, AddressType, PhoneType, EmailAddressType)
-- Templates existants (dashboard, login, lawyer/form)
-- Configuration sécurité
-- Voters (LawyerVoter, CabinetVoter)
-
-**Conclusions** :
-- Architecture solide et bien pensée
-- Sécurité robuste
-- Manque essentiellement les templates et le formulaire CabinetType
-- Dashboard nécessite implémentation des statistiques
-- Gestion utilisateurs absente
-
-### 2025-11-06 - PHASE 1 : CRUD Cabinet complété ✅
-**Développeur** : Claude Code
-**Actions** :
-- ✅ Création de `src/Form/CabinetType.php`
-- ✅ Création de `templates/admin/cabinet/index.html.twig`
-- ✅ Création de `templates/admin/cabinet/form.html.twig`
-- ✅ Validation syntaxe PHP et Twig
-- ✅ Vérification routes Symfony
-- ✅ Clear cache
-
-**Détails du formulaire CabinetType** :
-- Champs basiques : name, slug (auto-généré si vide), typeEntity, website, description, logoUrl
-- Responsable (managingPartner) : seulement en édition, filtré par lawyers du cabinet
-- Collections : phones et emails avec gestion dynamique JavaScript
-- Adresse : intégration complète OpenStreetMap avec Leaflet.js
-- Carte interactive : clic pour définir position, recherche d'adresse, géocodage inverse
-
-**Détails du template index** :
-- Liste paginée (20 par page)
-- Recherche par nom de cabinet
-- Affichage : logo, nom, type, responsable, contact, ville, nombre d'avocats, statut
-- Actions : modifier, activer/désactiver
-- Gestion état vide avec messages appropriés
-
-**Détails du template form** :
-- Layout 2 colonnes : formulaire (col-8) + infos/preview (col-4)
-- Sections : Informations générales, Coordonnées (phones/emails), Adresse/Localisation
-- JavaScript pour collections (ajout/suppression dynamique)
-- Carte OpenStreetMap avec marqueur draggable, recherche adresse, géocodage inverse
-- Prévisualisation en temps réel (logo, nom, type, responsable)
-
-**Tests effectués** :
-- ✅ Syntaxe PHP valide (`php -l`)
-- ✅ Templates Twig valides (`php bin/console lint:twig`)
-- ✅ Cache Symfony cleared
-- ✅ Routes enregistrées et accessibles
-
-**Résultats** :
-- CRUD Cabinet 100% fonctionnel
-- Interface utilisateur professionnelle et intuitive
-- Géolocalisation OpenStreetMap opérationnelle
-- Collections phones/emails gérables dynamiquement
-
-### 2025-11-06 - PHASE 2 : CRUD Lawyer complété ✅
-**Développeur** : Claude Code
-**Actions** :
-- ✅ Création de `templates/admin/lawyer/index.html.twig`
-- ✅ Création de `templates/admin/lawyer/profile.html.twig`
-- ✅ Validation syntaxe Twig
-- ✅ Vérification routes Symfony
-- ✅ Clear cache
-
-**Détails du template index** :
-- Liste paginée (20 par page) avec recherche
-- Message contextuel pour RESPO_CABINET (affiche uniquement ses lawyers)
-- Colonnes : photo, nom, cabinet, spécialités, contact, barreau
-- Badge "Responsable" pour le managingPartner du cabinet
-- Affichage des spécialités (2 premières + compteur si plus)
-- Permissions vérifiées avec voter LAWYER_EDIT
-- Statistiques en bas : total affiché, rattachés, sans cabinet (SUPER_ADMIN)
-- Gestion état vide avec messages appropriés selon le rôle
-
-**Détails du template profile** :
-- Page dédiée pour ROLE_LAWYER (/admin/lawyers/me)
-- Message d'information sur les limitations
-- Sections : Informations personnelles, Spécialités, Coordonnées, Adresse
-- Champs désactivés : barNumber (lecture seule avec icône cadenas)
-- Champs modifiables : firstName, lastName, biography, photoUrl, specialties
-- Collections phones/emails avec gestion dynamique JavaScript
-- Carte OpenStreetMap complète (identique au form)
-- Colonne latérale : infos (ID, slug, cabinet, barreau), prévisualisation, conseils
-- Preview temps réel : photo, nom, barreau, cabinet, spécialités
-
-**Particularités** :
-- Template index adaptatif selon le rôle (SUPER_ADMIN vs RESPO_CABINET)
-- Template profile utilise l'option `self_edit: true` du LawyerType
-- Voter permissions respectées pour l'affichage des actions
-- Interface cohérente avec les autres templates (Cabinet, etc.)
-
-**Tests effectués** :
-- ✅ Templates Twig valides (`php bin/console lint:twig`)
-- ✅ Cache Symfony cleared
-- ✅ Routes enregistrées et accessibles
-- ✅ 3 templates lawyer au total (index, form, profile)
-
-**Résultats** :
-- CRUD Lawyer 100% fonctionnel
-- Page profil dédiée pour les avocats (auto-édition)
-- Liste adaptative selon les permissions
-- Statistiques en temps réel
-
-### 2025-11-06 - PHASE 3 : Route par défaut et Dashboard complétés ✅
-**Développeur** : Claude Code
-**Actions** :
-- ✅ Ajout de la route par défaut `/` dans `config/routes.yaml`
-- ✅ Implémentation des statistiques dans `DashboardController`
-- ✅ Validation syntaxe PHP
-- ✅ Clear cache et vérification routes
-
-**Détails de la route par défaut** :
-- Route `root` configurée sur le path `/`
-- Utilise `RedirectController` de Symfony
-- Redirection non permanente (302) vers `admin_dashboard`
-- Permet l'accès direct au back-office sans taper `/admin`
-
-**Détails des statistiques Dashboard** :
-- Injection des repositories `CabinetRepository` et `LawyerRepository`
-- Calcul conditionnel selon le rôle utilisateur :
-
-**Pour SUPER_ADMIN** :
-- `totalCabinets` : Nombre total de cabinets
-- `activeCabinets` : Nombre de cabinets actifs
-- `totalLawyers` : Nombre total d'avocats
-- `lastActivity` : Dernier avocat ajouté (par ID DESC)
-
-**Pour RESPO_CABINET** :
-- `cabinetLawyers` : Nombre d'avocats de son cabinet
-- `lastActivity` : Dernier avocat ajouté à son cabinet
-
-**Pour LAWYER** :
-- Pas de statistiques (affichage simple du profil)
-
-**Particularités** :
-- Variables `stats` et `lastActivity` toujours définies (tableau vide par défaut)
-- Évite les erreurs dans le template Twig
-- Utilisation de méthodes helpers User : `isSuperAdmin()`, `isRespoCabinet()`
-- Note : Un champ `createdAt` pourrait être ajouté aux entités pour des dates précises
-
-**Tests effectués** :
-- ✅ Syntaxe PHP valide (`php -l`)
-- ✅ Cache Symfony cleared
-- ✅ Route `root` enregistrée et accessible
-- ✅ Template dashboard valide
-
-**Résultats** :
-- Dashboard 100% fonctionnel avec statistiques dynamiques
-- Route par défaut opérationnelle
-- Affichage adaptatif selon les rôles
-- Aucune erreur "stats undefined"
-
-### 2025-11-06 - AMÉLIORATIONS CRITIQUES : Gestion automatique des Users ✅
-**Développeur** : Claude Code
-**Actions** :
-- ✅ Création du service `UserCreationService`
-- ✅ Modification de `LawyerAdminController` pour création auto de User
-- ✅ Modification de `CabinetAdminController` pour promotion RESPO_CABINET
-- ✅ Création du template réutilisable `_osm_address_map.html.twig`
-- ✅ Intégration du plugin Leaflet-Control-Geocoder
-
-**Détails du service UserCreationService** :
-- `createUserForLawyer(Lawyer $lawyer)` : Crée automatiquement un User
-  - Utilise l'email primaire du lawyer ou email deprecated
-  - Vérifie qu'un User avec cet email n'existe pas déjà
-  - Définit le rôle ROLE_LAWYER par défaut
-  - **Mot de passe par défaut** : `ChangeMe2024!`
-  - Associe le lawyer au User et vice-versa
-  - Si le lawyer a un cabinet, associe le User au cabinet
-- `promoteToRespoCabinet(User $user)` : Ajoute ROLE_RESPO_CABINET
-- `mustChangePassword(User $user)` : Placeholder pour changement obligatoire
-
-**Modifications LawyerAdminController** :
-- À la création d'un lawyer (ligne 78-85) :
-  - Appel automatique à `createUserForLawyer()`
-  - Message flash avec le mot de passe par défaut
-  - Warning si email manquant (pas de User créé)
-
-**Modifications CabinetAdminController** :
-- À la modification du cabinet (ligne 74-129) :
-  - Détection du changement de `managingPartner`
-  - **Si nouveau responsable** :
-    - Recherche du User associé au lawyer
-    - Promotion en ROLE_RESPO_CABINET
-    - Association du User au cabinet
-    - Message flash de promotion
-  - **Si ancien responsable** :
-    - Retrait du ROLE_RESPO_CABINET
-    - Dissociation du cabinet
-    - Rétrogradation en ROLE_LAWYER simple
-
-**Détails du template OSM amélioré** :
-- Utilise le plugin `leaflet-control-geocoder` v2.4.0
-- **Barre de recherche intégrée** dans la carte
-- Recherche limitée à la Côte d'Ivoire (`countrycodes: 'ci'`)
-- Langue française par défaut
-- **Autocomplete** avec suggestions temps réel
-- Remplissage automatique des champs d'adresse :
-  - `road` → line1
-  - `suburb` → line2
-  - `city/town/village` → city
-  - `postcode` → postalCode
-- **Marqueur draggable** : glisser-déposer pour ajuster
-- Géocodage inverse au clic sur la carte
-- Message d'aide contextuel (dismissible)
-
-**Fonctionnalités clés** :
-1. **Création Lawyer → User automatique** :
-   - ✅ Email comme login
-   - ✅ Mot de passe par défaut : `ChangeMe2024!`
-   - ✅ Rôle ROLE_LAWYER
-   - ✅ Lié au lawyer
-
-2. **Désignation responsable → Promotion automatique** :
-   - ✅ SUPER_ADMIN désigne le responsable en éditant le cabinet
-   - ✅ Le lawyer devient automatiquement RESPO_CABINET
-   - ✅ Rétrogradation de l'ancien responsable
-
-3. **Recherche OpenStreetMap directe** :
-   - ✅ Plugin Geocoder intégré
-   - ✅ Barre de recherche dans la carte
-   - ✅ Autocomplete avec suggestions
-   - ✅ Remplissage auto des champs
-
-**Tests effectués** :
-- ✅ Syntaxe PHP valide (UserCreationService, Controllers)
-- ✅ Cache Symfony cleared
-- ✅ Template Twig valide
-
-**Résultats** :
-- Workflow complet : Lawyer → User → RESPO_CABINET automatisé
-- Plugin OSM avec recherche directe opérationnel
-- Aucune intervention manuelle requise pour créer des comptes
-- Expérience utilisateur grandement améliorée
-
-**Note importante** :
-- Le mot de passe par défaut `ChangeMe2024!` est affiché dans le message flash
-- ~~TODO futur : Ajouter un champ `mustChangePassword` dans User~~ ✅ **FAIT**
-- ~~TODO futur : Forcer le changement au premier login~~ ✅ **FAIT**
-
-### 2025-11-06 - TODO 1 & 3 : Changement password obligatoire + CRUD Types/Spécialités ✅
-**Développeur** : Claude Code
-**Actions** :
-- ✅ Ajout du champ `mustChangePassword` dans User
-- ✅ Création de `MustChangePasswordSubscriber` (EventSubscriber)
-- ✅ Création de `ChangePasswordController` et `ChangePasswordType`
-- ✅ Création du template `change_password.html.twig`
-- ✅ Création de `CabinetTypeAdminController` et repository
-- ✅ Création de `SpecialtyAdminController`
-- ✅ Création des templates CRUD pour types et spécialités
-
-### 2025-11-07 - Résolution problèmes Docker + Migrations MySQL ✅
-**Développeur** : Claude Code
-**Problèmes rencontrés** :
-1. **Permission denied** sur `/var/www/html/src/Service` et `/var/www/html/src/EventSubscriber`
-2. **Migrations SQLite** générées au lieu de MySQL
-3. **Champ mustChangePassword** déjà présent mais migrations non synchronisées
-
-**Actions correctives** :
-- ✅ Correction permissions : `chmod 775 src/Service src/EventSubscriber`
-- ✅ Création du script `fix-permissions.sh` pour éviter ces problèmes
-- ✅ Suppression des migrations SQLite incorrectes (AUTOINCREMENT)
-- ✅ Création migration MySQL correcte (`Version20251107003000.php`)
-- ✅ Marquage manuel de la migration comme exécutée
-- ✅ Validation finale : schéma en sync avec la base
-
-**Détails de la migration MySQL** :
-```sql
-ALTER TABLE user ADD must_change_password TINYINT(1) DEFAULT 0 NOT NULL
-```
-
-**Environnement Docker** :
-- PHP 8.2.29
-- Symfony 6.4.26
-- MySQL/MariaDB 10.11.2
-- Base de données : `u443003029_api`
-
-**Commandes utiles Docker** :
-```bash
-# Corriger les permissions
-./fix-permissions.sh
-
-# Clear cache
-docker-compose exec php php bin/console cache:clear
-
-# Migrations
-docker-compose exec php php bin/console doctrine:migrations:status
-docker-compose exec php php bin/console doctrine:migrations:migrate
-
-# Valider le schéma
-docker-compose exec php php bin/console doctrine:schema:validate
-```
-
-**Tests effectués** :
-- ✅ Cache cleared dans Docker
-- ✅ UserCreationService chargé correctement
-- ✅ MustChangePasswordSubscriber enregistré (listener #11)
-- ✅ Toutes les routes actives
-- ✅ Base de données synchronisée
-- ✅ Champ `must_change_password` présent avec valeur par défaut 0
-
-**Corrections supplémentaires** :
-- ✅ Ajout de la variable `self_edit` dans LawyerAdminController (methods new/edit)
-  - Fichier : `src/Controller/Admin/LawyerAdminController.php` lignes 93 et 117
-  - Correction : Ajout de `'self_edit' => false` dans les paramètres de render
-  - Évite l'erreur : "Variable 'self_edit' does not exist" dans form.html.twig
-
-- ✅ Suppression de la référence au champ `createdAt` inexistant
-  - Fichier : `templates/admin/lawyer/form.html.twig` ligne 187
-  - Problème : L'entité Lawyer n'a pas de champ `createdAt`/`updatedAt`
-  - Correction : Suppression de l'affichage "Créé le" et ajout condition pour ID
-  - Template simplifié pour afficher uniquement ID (si existe) et Slug
-
-- ✅ Ajout du cascade persist pour les relations Address
-  - Fichiers : `src/Entity/Lawyer.php` ligne 42 et `src/Entity/Cabinet.php` ligne 56
-  - Problème : Doctrine ne savait pas comment gérer les nouvelles entités Address
-  - Erreur : "Entity was not configured to cascade persist operations"
-  - Correction : Ajout de `cascade: ['persist']` sur les relations ManyToOne vers Address
-  - Permet la création automatique des adresses lors de la création d'un Lawyer ou Cabinet
-
-**Détails du système de changement de mot de passe** :
-
-**1. Entité User** :
-- Nouveau champ : `mustChangePassword` (bool, default: false)
-- Getters/setters ajoutés
-- Migration générée
-
-**2. UserCreationService** :
-- `setMustChangePassword(true)` lors de la création
-- Méthode `mustChangePassword()` mise à jour
-
-**3. EventSubscriber** :
-- `MustChangePasswordSubscriber` intercepte toutes les requêtes
-- Vérifie si `user->mustChangePassword() === true`
-- Redirection forcée vers `/change-password`
+- `CABINET_MANAGE_LAWYERS` : SUPER_ADMIN ou RESPO_CABINET (son propre cabinet)
+
+**LawyerVoter** (src/Security/Voter/LawyerVoter.php:9)
+- `LAWYER_VIEW` : Tous les utilisateurs connectés
+- `LAWYER_EDIT` : SUPER_ADMIN, RESPO_CABINET (lawyers de son cabinet), ou LAWYER (son propre profil)
+- `LAWYER_DELETE` : SUPER_ADMIN ou RESPO_CABINET (lawyers de son cabinet)
+
+### Fonctionnalités implémentées
+
+#### 1. API Publique ✅
+**Endpoints Cabinet** (src/Controller/Api/CabinetController.php:17)
+- `GET /api/cabinets` : Liste paginée avec filtres (name, type, city)
+- `GET /api/cabinets/{slug}` : Détails d'un cabinet
+
+**Endpoints Lawyer** (src/Controller/Api/LawyerController.php:13)
+- `GET /api/lawyers` : Liste paginée avec filtres (name, cabinet, city, specialty)
+- `GET /api/lawyers/{slug}` : Détails d'un avocat
+
+**Sérialiseurs :**
+- Gestion intelligente des champs dépréciés (fallback vers anciens champs)
+- Exposition des relations (cabinet ↔ lawyers, managingPartner)
+- Gestion des URLs absolues pour les logos/photos
+
+#### 2. Back-office Cabinet ✅
+
+**Routes implémentées** (src/Controller/Admin/CabinetAdminController.php:19-21)
+- `GET /admin/cabinets` : Liste des cabinets (SUPER_ADMIN)
+- `GET /admin/cabinets/new` : Formulaire de création (SUPER_ADMIN)
+- `POST /admin/cabinets/new` : Création d'un cabinet (SUPER_ADMIN)
+- `GET /admin/cabinets/{id}/edit` : Formulaire de modification (SUPER_ADMIN)
+- `POST /admin/cabinets/{id}/edit` : Modification d'un cabinet (SUPER_ADMIN)
+- `GET /admin/cabinets/{id}/lawyers` : Gestion des avocats du cabinet (SUPER_ADMIN)
+- `POST /admin/cabinets/{id}/lawyers` : Actions sur les avocats (attach, detach, designate)
+- `POST /admin/cabinets/{id}/toggle` : Activer/Désactiver un cabinet (SUPER_ADMIN)
+
+**Fonctionnalités :**
+- Création/modification avec formulaire complet
+- Collections dynamiques pour phones et emails (JavaScript)
+- Upload de logo avec gestion des contraintes
+- Désignation du responsable de cabinet
+- Rattachement d'avocats (à la création ou via page dédiée)
+- Auto-promotion en RESPO_CABINET lors de la désignation
+
+#### 3. Back-office Lawyer ✅
+
+**Routes implémentées** (src/Controller/Admin/LawyerAdminController.php:16-17)
+- `GET /admin/lawyers` : Liste des lawyers (RESPO_CABINET filtre par son cabinet)
+- `GET /admin/lawyers/new` : Formulaire de création
+- `POST /admin/lawyers/new` : Création d'un lawyer + compte User automatique
+- `GET /admin/lawyers/{id}/edit` : Formulaire de modification
+- `POST /admin/lawyers/{id}/edit` : Modification d'un lawyer
+- `GET /admin/lawyers/me` : Profil personnel (ROLE_LAWYER)
+- `POST /admin/lawyers/me` : Modification du profil personnel (ROLE_LAWYER)
+
+**Fonctionnalités :**
+- Création avec rattachement automatique au cabinet (pour RESPO_CABINET)
+- Modification limitée pour LAWYER (pas de cabinet, pas de barNumber)
+- Collections dynamiques pour phones, emails, specialties
+
+#### 4. Gestion des Utilisateurs ✅
+
+**UserCreationService** (src/Service/UserCreationService.php:9)
+- `createUserForLawyer(Lawyer $lawyer)` : Crée automatiquement un compte User lors de la création d'un Lawyer
+  - Email : Email principal du lawyer
+  - Login : Email du lawyer
+  - Mot de passe par défaut : `ChangeMe2024!`
+  - Rôle : `ROLE_LAWYER`
+  - Flag : `mustChangePassword = true` (force le changement à la première connexion)
+  - Rattachement au cabinet si existant
+
+- `promoteToRespoCabinet(User $user)` : Promotion d'un User en RESPO_CABINET
+
+**MustChangePasswordSubscriber** (src/EventSubscriber/MustChangePasswordSubscriber.php:12)
+- Intercepte toutes les requêtes
+- Redirige vers `/change-password` si `mustChangePassword = true`
 - Routes autorisées : `app_change_password`, `app_logout`, profiler
 
-**4. Page de changement de mot de passe** :
-- Route : `/change-password`
-- Formulaire sécurisé avec 3 champs :
-  - Mot de passe actuel (validation)
-  - Nouveau mot de passe (min 8 caractères)
-  - Confirmation
-- **Indicateur de force** du mot de passe (JS temps réel)
-- Message d'alerte si obligatoire (première connexion)
-- Affichage du mot de passe par défaut si `isMandatory`
-- Désactivation de `mustChangePassword` après changement
-- Conseils pour un mot de passe sécurisé
+#### 5. Localisation OpenStreetMap ✅
 
-**5. Workflow complet** :
-1. Admin crée un lawyer
-2. User créé avec `mustChangePassword = true`
-3. Lawyer se connecte avec `ChangeMe2024!`
-4. Redirection automatique vers `/change-password`
-5. **Impossible d'accéder à autre chose** tant que non changé
-6. Lawyer change son mot de passe
-7. `mustChangePassword = false`
-8. Accès normal au back-office
+**Template réutilisable** (templates/admin/_osm_address_map.html.twig:1)
+- Carte Leaflet interactive
+- Plugin Geocoder avec barre de recherche intégrée
+- Marqueur draggable pour ajuster la position
+- Géocodage inverse (clic → adresse automatique)
+- Recherche d'adresse avec autocomplétion
+- Filtrage par pays (Côte d'Ivoire)
+- Mise à jour automatique des champs lat/lng
 
-**Détails des CRUD Types/Spécialités** :
+**Intégration :**
+- Formulaire Cabinet : templates/admin/cabinet/form.html.twig:208
+- Formulaire Lawyer : templates/admin/lawyer/form.html.twig:151
 
-**CabinetType** :
-- Route : `/admin/cabinet-types`
-- SUPER_ADMIN uniquement
-- Actions : Liste, Créer, Supprimer
-- Formulaire inline simple (nom seulement)
-- Slug auto-généré avec SluggerInterface
-- Template 2 colonnes : liste + formulaire
+#### 6. Upload de fichiers ✅
 
-**Specialty** :
-- Route : `/admin/specialties`
-- SUPER_ADMIN uniquement
-- Actions : Liste, Créer, Supprimer
-- Formulaire inline : nom + description
-- Slug auto-généré
-- Template 2 colonnes : liste + formulaire
+**FileUploadService** (src/Service/FileUploadService.php:8)
+- `upload(UploadedFile $file, string $subfolder)` : Upload avec slug du nom
+- `delete(string $fileUrl)` : Suppression de fichier
+- `getDefaultCabinetLogo()` : Logo par défaut
+- `getAbsoluteUrl(?string $url)` : Conversion URL relative → absolue (pour API)
 
-**Tests effectués** :
-- ✅ Syntaxe PHP valide (tous les fichiers)
-- ✅ Templates Twig valides
-- ✅ Cache Symfony cleared
-- ✅ Routes enregistrées
-- ✅ Repository CabinetType créé
-
-**Résultats** :
-- ✅ Changement de mot de passe obligatoire 100% fonctionnel
-- ✅ Sécurité renforcée (force du password, validation)
-- ✅ CRUD CabinetType opérationnel
-- ✅ CRUD Specialty opérationnel
-- ✅ Interface admin complète pour gérer les référentiels
-
----
-
-## 📞 CONTACTS & RESSOURCES
-
-### Documentation Symfony
-- https://symfony.com/doc/6.4/index.html
-- https://symfony.com/doc/current/security.html
-- https://symfony.com/doc/current/doctrine.html
-
-### Outils Externes
-- OpenStreetMap Nominatim : https://nominatim.org/
-- Leaflet.js : https://leafletjs.com/
-- Bootstrap 5.3 : https://getbootstrap.com/docs/5.3/
-
----
-
-### 2025-11-07 - AMÉLIORATIONS MAJEURES MODULE CABINET ✅
-**Développeur** : Claude Code
-**Environnement** : Docker (PHP 8.2.29, MySQL/MariaDB 10.11.2, Symfony 6.4.26)
-
-**Contexte** : Suite à l'analyse des besoins utilisateur, implémentation complète des améliorations du module Cabinet pour optimiser l'expérience utilisateur et l'intégration avec le frontend Angular.
-
-#### **Actions réalisées** :
-
-**1. Système d'upload de fichiers pour les logos** ✅
-- ✅ Création du service `FileUploadService`
-  - Upload d'images (JPEG, PNG, GIF, WebP, max 2Mo)
-  - Génération d'URLs complètes `/uploads/cabinets/`
-  - Suppression automatique des anciens fichiers
-  - Logo par défaut : `https://cncj-ci.ci/wp-content/uploads/2024/11/LOGO-SITE-INTERNET-copie.png`
-- ✅ Configuration dans `services.yaml` (`uploads_directory`, `default_cabinet_logo`)
-- ✅ Modification du formulaire `CabinetType` : champ `logoFile` (FileType) au lieu d'UrlType
-- ✅ Gestion de l'upload dans `CabinetAdminController` (new/edit)
-- ✅ Template avec `enctype="multipart/form-data"` et prévisualisation
-- ✅ Dossier `/public/uploads/cabinets/` créé avec permissions 775
-
-**2. Génération automatique du slug** ✅
-- ✅ Injection du `SluggerInterface` dans CabinetType
-- ✅ Génération auto dans le contrôleur si champ vide
-- ✅ Format normalisé : minuscules avec tirets
-
-**3. Amélioration des formulaires Phone et Email** ✅
-- ✅ `PhoneType` et `EmailAddressType` refactorisés :
-  - Labels en liste déroulante (ChoiceType)
-  - Champs `isPrimary` et `position` en hidden
-  - Validation obligatoire pour label et valeur
-- ✅ Template amélioré :
-  - Layout Bootstrap optimisé (col-4 + col-6 + col-2)
-  - Affichage des erreurs de validation
-  - JavaScript intelligent :
-    * Gestion auto de `isPrimary` (premier élément = primary)
-    * Gestion auto de `position` (index dans la collection)
-    * Protection contre suppression du dernier élément
-    * Message "Au moins un requis" affiché
-
-**4. Amélioration OpenStreetMap** ✅
-- ✅ Utilisation du template réutilisable `_osm_address_map.html.twig`
-- ✅ Plugin Leaflet Control Geocoder intégré :
-  - Barre de recherche dans la carte
-  - Autocomplete avec suggestions temps réel
-  - Recherche limitée à la Côte d'Ivoire
-  - Marqueur draggable
-  - Géocodage inverse au clic
-  - Remplissage automatique des champs d'adresse
-
-**5. Gestion des adresses vides** ✅
-- ✅ Création de `AddressValidationSubscriber` (Doctrine)
-- ✅ Détection et suppression automatique des adresses complètement vides
-- ✅ Évite les occurrences inutiles en base de données
-
-**6. Amélioration du tableau de liste des cabinets** ✅
-- ✅ Colonne "Actions" élargie avec boutons explicites :
-  - "Modifier" (informations du cabinet)
-  - "Avocats" (gestion des avocats du cabinet)
-  - "Activer/Désactiver" (toggle statut)
-- ✅ Support du filtrage par cabinet dans `LawyerAdminController`
-- ✅ Paramètre GET `?cabinet=X` pour filtrer les avocats
-
-**7. Intégration API avec logo par défaut** ✅
-- ✅ Injection du `FileUploadService` dans `CabinetController` (API)
-- ✅ Retour systématique du logo par défaut si `logoUrl` vide
-- ✅ Champ `logoUrl` toujours présent et valide dans les réponses JSON
-- ✅ Compatible avec le frontend Angular
-
-#### **Fichiers créés** (3) :
-1. `src/Service/FileUploadService.php`
-2. `src/EventSubscriber/AddressValidationSubscriber.php`
-3. `public/uploads/cabinets/` (dossier)
-
-#### **Fichiers modifiés** (9) :
-1. `config/services.yaml`
-2. `src/Form/CabinetType.php`
-3. `src/Form/PhoneType.php`
-4. `src/Form/EmailAddressType.php`
-5. `src/Controller/Admin/CabinetAdminController.php`
-6. `src/Controller/Admin/LawyerAdminController.php`
-7. `src/Controller/Api/CabinetController.php`
-8. `templates/admin/cabinet/form.html.twig`
-9. `templates/admin/cabinet/index.html.twig`
-
-#### **Fichiers de documentation créés** (2) :
-1. `TEST-CABINET-IMPROVEMENTS.md` - Guide complet des tests fonctionnels
-2. `validate-cabinet-improvements.sh` - Script de validation automatique
-
-#### **Tests effectués** :
-- ✅ Syntaxe PHP valide (tous les fichiers)
-- ✅ Templates Twig valides
-- ✅ Services enregistrés
-- ✅ Paramètres configurés
-- ✅ Routes actives
-- ✅ Schéma Doctrine synchronisé
-- ✅ Dossiers créés avec bonnes permissions
-- ✅ Cache cleared
-
-**Commande de validation** :
-```bash
-./validate-cabinet-improvements.sh
+**Configuration** (config/services.yaml:32-35)
+```yaml
+App\Service\FileUploadService:
+  arguments:
+    $uploadsDirectory: '%kernel.project_dir%/public/uploads'
+    $baseUrl: '%env(default::APP_BASE_URL)%'
 ```
 
-**Résultats** : ✅ **21/21 tests techniques passés avec succès**
+**Contraintes de validation** (src/Form/CabinetType.php:80-91)
+- Formats acceptés : JPEG, PNG, GIF, WebP
+- Taille max : 2 Mo
+- Stockage : `public/uploads/cabinets/`
 
-#### **Fonctionnalités clés** :
-- ✅ Upload de logos avec URL complète pour l'API
-- ✅ Logo par défaut automatique si aucun fichier uploadé
-- ✅ Slug généré automatiquement
-- ✅ Collections Phone/Email avec gestion intelligente de isPrimary et position
-- ✅ Labels en liste déroulante pour meilleure UX
-- ✅ Validation obligatoire : au moins 1 téléphone et 1 email
-- ✅ Recherche OpenStreetMap performante avec autocomplete
-- ✅ Adresses vides non persistées en base
-- ✅ Actions claires dans le tableau de liste
-- ✅ API retourne toujours une URL de logo valide
+#### 7. Route par défaut ✅
 
-#### **Points d'attention** :
-- Logo par défaut : `https://cncj-ci.ci/wp-content/uploads/2024/11/LOGO-SITE-INTERNET-copie.png`
-- Paramètre global : `default_cabinet_logo` dans `services.yaml`
-- Uploads stockés dans `/public/uploads/cabinets/`
-- Format des fichiers uploadés : `slug-uniqid.ext`
-- Validation stricte : JPEG, PNG, GIF, WebP max 2Mo
-
-#### **Prochaines étapes recommandées** :
-- [ ] Tests fonctionnels manuels (voir TEST-CABINET-IMPROVEMENTS.md)
-- [ ] Vérification de l'API avec frontend Angular
-- [ ] Appliquer les mêmes améliorations au module Lawyer
-- [ ] Documentation API OpenAPI/Swagger pour le champ logoUrl
+**Configuration** (config/routes.yaml:2-7)
+```yaml
+root:
+  path: /
+  controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController
+  defaults:
+    route: 'admin_dashboard'
+    permanent: false
+```
+- La racine `/` redirige vers le dashboard du back-office
 
 ---
 
-**Dernière mise à jour** : 2025-11-07
-**Dernière phase complétée** : Améliorations majeures module Cabinet ✅
-**Projet** : ✅ **COMPLET ET PRODUCTION-READY**
-**Environnement** : Docker (PHP 8.2.29, Symfony 6.4.26, MySQL/MariaDB 10.11.2)
-**Base de données** : ✅ Synchronisée avec le schéma
+## 🔴 PROBLÈMES IDENTIFIÉS
+
+### ❌ CRITIQUE : OpenStreetMap - Recherche non fonctionnelle dans formulaire Lawyer
+
+**Localisation** : templates/admin/lawyer/form.html.twig:219-317
+
+**Problème :**
+Le template `lawyer/form.html.twig` **ne réutilise PAS le template `_osm_address_map.html.twig`** qui contient le plugin Geocoder fonctionnel. À la place, il implémente une carte Leaflet basique avec :
+- Un système de recherche "fait maison" incomplet (lignes 297-314)
+- Pas de barre de recherche visible dans l'interface
+- Pas d'intégration du plugin Leaflet Control Geocoder
+- Console.log() au lieu d'une UI pour afficher les résultats
+
+**Conséquences :**
+- L'utilisateur ne peut pas rechercher une adresse lors de la création/modification d'un lawyer
+- Doit cliquer manuellement sur la carte pour placer le marqueur
+- Expérience utilisateur incohérente entre Cabinet et Lawyer
+
+**Solution attendue :**
+Utiliser le même include que dans `cabinet/form.html.twig` :
+```twig
+{% include 'admin/_osm_address_map.html.twig' with {'map_id': 'lawyer-address-map'} %}
+```
+
+---
+
+### ❌ MOYEN : Upload de pièces jointes pour Cabinet non fonctionnel
+
+**Contexte :**
+L'utilisateur mentionne : "Les pièces jointes implémentées au niveau de cabinet ne fonctionnent pas."
+
+**Analyse du code actuel :**
+- Le formulaire `CabinetType` (src/Form/CabinetType.php:72-93) gère uniquement le champ `logoFile`
+- **Aucun champ pour "pièces jointes" (documents joints)** n'est présent dans :
+  - Le formulaire `CabinetType.php`
+  - L'entité `Cabinet.php`
+  - Le template `cabinet/form.html.twig`
+
+**Besoin potentiel identifié :**
+Il semble manquer une fonctionnalité pour permettre d'uploader plusieurs documents/fichiers joints au cabinet (ex: documents juridiques, certifications, etc.).
+
+**État :** Fonctionnalité non implémentée
+
+**Action requise :**
+1. Clarifier avec l'utilisateur :
+   - Quel type de pièces jointes ? (PDF, Word, images, etc.)
+   - Combien de fichiers par cabinet ?
+   - À quoi servent ces documents ? (affichage public API, back-office uniquement ?)
+2. Ajouter une nouvelle entité `CabinetDocument` (ou collection de fichiers)
+3. Implémenter l'upload multiple
+4. Ajouter les champs dans le formulaire
+
+---
+
+### ⚠️ MINEUR : Formulaires Twig - Expérience utilisateur améliorable
+
+#### 1. Cabinet Form - Gestion des avocats à la modification
+
+**Contexte** (src/Form/CabinetType.php:96-136)
+```php
+// Responsable et avocats - seulement à la création (pas en modification)
+$isCreation = !($cabinet && $cabinet->getId());
+
+if ($isCreation) {
+    // Champs managingPartner et lawyers disponibles
+}
+```
+
+**Problème :**
+- En **création** : On peut désigner un responsable et rattacher des avocats
+- En **modification** : Ces champs disparaissent, l'utilisateur doit passer par `/admin/cabinets/{id}/lawyers`
+
+**Impact :** Navigation supplémentaire, pas intuitif
+
+**Solution possible :**
+- Option A : Afficher ces champs même en modification
+- Option B : Ajouter un bouton "Gérer les avocats" bien visible dans le formulaire d'édition
+- Option C : Afficher un résumé des avocats rattachés + lien vers la page de gestion
+
+#### 2. Formulaire Lawyer - Positionnement de la carte
+
+**Localisation** : templates/admin/lawyer/form.html.twig:151
+
+**Problème :**
+```twig
+<div class="card-body">
+    {{ form_row(form.address) }}
+    <div id="address-map"></div>
+</div>
+```
+La carte est rendue directement dans le `<div id="address-map"></div>` mais :
+- Pas de styles définis pour la hauteur (contrairement au template `_osm_address_map.html.twig`)
+- Possible problème d'affichage si la hauteur n'est pas définie
+
+**Solution :** Appliquer les mêmes styles que dans `_osm_address_map.html.twig`
+
+#### 3. Collections phones/emails - Validation côté client
+
+**Contexte** : templates/admin/cabinet/form.html.twig:422
+```javascript
+if (itemCount <= 1) {
+    alert('Vous devez conserver au moins un élément');
+    return;
+}
+```
+
+**Problème :**
+- Validation côté client avec `alert()` (UX datée)
+- Pas de validation Symfony côté serveur pour garantir au moins 1 phone et 1 email
+
+**Solutions :**
+- Remplacer `alert()` par Bootstrap Toasts ou messages d'erreur inline
+- Ajouter une contrainte Symfony `Count` dans les entités
+
+---
+
+### ⚠️ MINEUR : Gestion du mot de passe par défaut
+
+**Contexte** : src/Service/UserCreationService.php:54
+```php
+$defaultPassword = 'ChangeMe2024!';
+```
+
+**Problème :**
+Le mot de passe par défaut est **hardcodé** dans le service. Cela pose plusieurs questions :
+1. Tous les utilisateurs ont le même mot de passe temporaire → risque de sécurité si quelqu'un le devine
+2. Pas de notification par email (le créateur doit communiquer manuellement le mot de passe)
+
+**Recommandations :**
+1. **Option A (recommandée)** : Générer un mot de passe aléatoire unique par utilisateur
+   - Exemple : `bin2hex(random_bytes(8))` → `3f7a9b2c5e8d1f4a`
+   - Afficher le mot de passe dans un flash message après création
+   - L'admin le communique à l'utilisateur
+
+2. **Option B** : Système d'invitation par email
+   - Générer un token d'activation unique
+   - Envoyer un email avec un lien pour définir son mot de passe
+   - Plus sécurisé mais nécessite configuration email
+
+---
+
+### ✅ POINTS VALIDÉS (Fonctionnent correctement)
+
+#### ✅ Création automatique de compte User
+**Workflow validé** (src/Controller/Admin/LawyerAdminController.php:92-99) :
+1. Admin crée un Lawyer dans le back-office
+2. `UserCreationService::createUserForLawyer()` est appelé automatiquement
+3. Un User est créé avec :
+   - Email = email principal du Lawyer
+   - Password = `ChangeMe2024!` (hashé)
+   - Role = `ROLE_LAWYER`
+   - Flag `mustChangePassword = true`
+4. Flash message informant l'admin du mot de passe par défaut
+
+#### ✅ Désignation du responsable de cabinet
+**Workflow validé** (src/Controller/Admin/CabinetAdminController.php:249-282) :
+1. **À la création** (src/Controller/Admin/CabinetAdminController.php:96-109) :
+   - Le SUPER_ADMIN sélectionne un Lawyer dans le champ `managingPartner`
+   - Le Lawyer est rattaché automatiquement au Cabinet
+   - Son compte User est promu en `ROLE_RESPO_CABINET`
+
+2. **En modification via `/admin/cabinets/{id}/lawyers`** (action `designate`) :
+   - Le SUPER_ADMIN clique sur "Désigner comme responsable"
+   - L'ancien responsable est rétrogradé (perte du rôle `ROLE_RESPO_CABINET`)
+   - Le nouveau responsable est promu
+
+#### ✅ Rattachement d'un Lawyer à un Cabinet
+**Workflow validé** :
+1. **À la création du Lawyer** (src/Controller/Admin/LawyerAdminController.php:72-78) :
+   - SUPER_ADMIN : Peut choisir n'importe quel cabinet dans le formulaire
+   - RESPO_CABINET : Le champ `cabinet` est pré-rempli et désactivé (son propre cabinet)
+
+2. **À la modification du Lawyer** (src/Form/LawyerType.php:64-69) :
+   - SUPER_ADMIN : Peut changer le cabinet
+   - RESPO_CABINET : Le champ `cabinet` est désactivé (ne peut pas transférer à un autre cabinet)
+   - LAWYER : Le champ `cabinet` n'est pas affiché (self_edit mode)
+
+3. **Via la page de gestion des avocats du cabinet** (src/Controller/Admin/CabinetAdminController.php:232-236) :
+   - Action `attach` : Rattache un avocat existant au cabinet
+   - Action `detach` : Détache un avocat du cabinet (sauf s'il est responsable)
+
+#### ✅ OpenStreetMap dans formulaire Cabinet
+**Fonctionnement validé** (templates/admin/_osm_address_map.html.twig:24) :
+- Carte Leaflet avec plugin Geocoder
+- Barre de recherche fonctionnelle
+- Géocodage inverse au clic
+- Marqueur draggable
+- Mise à jour automatique des champs lat/lng/city/line1
+
+---
+
+## 📅 PLAN D'IMPLÉMENTATION
+
+### 🔹 PHASE 1 : CABINET
+
+#### Tâche 1.1 : Clarifier les "pièces jointes"
+**Priorité** : HAUTE
+**Estimation** : 30 min (discussion) + développement selon besoin
+
+**Actions :**
+1. Interroger l'utilisateur :
+   - Type de documents attendus (PDF, images, etc.) ?
+   - Usage : API publique ou back-office uniquement ?
+   - Nombre de fichiers par cabinet ?
+2. Selon la réponse :
+   - Si fonctionnalité non nécessaire : Documenter et clore
+   - Si nécessaire : Passer aux tâches 1.2 à 1.5
+
+#### Tâche 1.2 : Créer l'entité CabinetDocument
+**Priorité** : MOYENNE (dépend de 1.1)
+**Estimation** : 1h
+
+**Implémentation :**
+```php
+// src/Entity/CabinetDocument.php
+#[ORM\Entity]
+class CabinetDocument
+{
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
+
+    #[ORM\Column(length: 255)]
+    private string $filename;
+
+    #[ORM\Column(length: 255)]
+    private string $fileUrl;
+
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $label = null; // "Certification", "Document légal", etc.
+
+    #[ORM\Column(length: 50)]
+    private string $mimeType;
+
+    #[ORM\Column]
+    private int $fileSize;
+
+    #[ORM\Column]
+    private \DateTimeImmutable $uploadedAt;
+
+    #[ORM\ManyToOne(targetEntity: Cabinet::class)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    private Cabinet $cabinet;
+
+    // Getters/Setters...
+}
+```
+
+**Mise à jour de Cabinet.php :**
+```php
+#[ORM\OneToMany(targetEntity: CabinetDocument::class, mappedBy: 'cabinet', cascade: ['persist', 'remove'])]
+private Collection $documents;
+```
+
+**Migration :**
+```bash
+docker-compose exec php php bin/console make:migration
+docker-compose exec php php bin/console doctrine:migrations:migrate
+```
+
+#### Tâche 1.3 : Ajouter le champ documents au formulaire
+**Priorité** : MOYENNE
+**Estimation** : 1h30
+
+**Fichiers à modifier :**
+- `src/Form/CabinetDocumentType.php` (nouveau)
+- `src/Form/CabinetType.php` (ajout du champ collection)
+- `templates/admin/cabinet/form.html.twig` (section upload)
+
+**Exemple :**
+```php
+// src/Form/CabinetType.php
+$builder->add('documents', CollectionType::class, [
+    'entry_type' => FileType::class,
+    'allow_add' => true,
+    'allow_delete' => true,
+    'by_reference' => false,
+    'label' => 'Documents joints (PDF, Word, images)',
+]);
+```
+
+#### Tâche 1.4 : Implémenter l'upload multiple
+**Priorité** : MOYENNE
+**Estimation** : 2h
+
+**Fichiers à modifier :**
+- `src/Controller/Admin/CabinetAdminController.php` (gestion upload)
+- `src/Service/FileUploadService.php` (méthode `uploadMultiple()`)
+
+**Logique :**
+```php
+// Dans le contrôleur
+foreach ($form->get('documents')->getData() as $file) {
+    if ($file instanceof UploadedFile) {
+        $fileUrl = $this->fileUploadService->upload($file, 'cabinets/documents');
+        $document = new CabinetDocument();
+        $document->setFilename($file->getClientOriginalName());
+        $document->setFileUrl($fileUrl);
+        $document->setMimeType($file->getMimeType());
+        $document->setFileSize($file->getSize());
+        $document->setCabinet($cabinet);
+        $document->setUploadedAt(new \DateTimeImmutable());
+        $this->em->persist($document);
+    }
+}
+```
+
+#### Tâche 1.5 : Exposer les documents dans l'API (si nécessaire)
+**Priorité** : BASSE
+**Estimation** : 30 min
+
+**Fichier** : `src/Controller/Api/CabinetController.php`
+
+```php
+// Dans serializeCabinetDetail()
+'documents' => array_map(fn($doc) => [
+    'id' => $doc->getId(),
+    'label' => $doc->getLabel(),
+    'filename' => $doc->getFilename(),
+    'url' => $this->fileUploadService->getAbsoluteUrl($doc->getFileUrl()),
+    'mimeType' => $doc->getMimeType(),
+    'fileSize' => $doc->getFileSize(),
+    'uploadedAt' => $doc->getUploadedAt()->format('Y-m-d H:i:s'),
+], $cabinet->getDocuments()->toArray()),
+```
+
+#### Tâche 1.6 : Améliorer l'UX du formulaire Cabinet (modifications)
+**Priorité** : BASSE
+**Estimation** : 1h
+
+**Objectif :** Faciliter la gestion des avocats lors de la modification
+
+**Option retenue :** Afficher un encadré récapitulatif avec lien
+
+**Fichier** : `templates/admin/cabinet/form.html.twig`
+
+**Implémentation :**
+```twig
+{% if cabinet.id %}
+    <div class="card mb-3">
+        <div class="card-header">
+            <i class="bi bi-people"></i>
+            Avocats rattachés
+        </div>
+        <div class="card-body">
+            <p class="mb-2">
+                <strong>{{ cabinet.lawyers|length }}</strong> avocat(s) rattaché(s)
+            </p>
+            {% if cabinet.managingPartner %}
+                <p class="mb-3">
+                    <i class="bi bi-person-badge text-primary"></i>
+                    Responsable : <strong>{{ cabinet.managingPartner.fullName }}</strong>
+                </p>
+            {% endif %}
+            <a href="{{ path('admin_cabinet_lawyers', {'id': cabinet.id}) }}"
+               class="btn btn-primary btn-sm">
+                <i class="bi bi-pencil-square"></i>
+                Gérer les avocats et le responsable
+            </a>
+        </div>
+    </div>
+{% endif %}
+```
+
+---
+
+### 🔹 PHASE 2 : LAWYER
+
+#### Tâche 2.1 : Corriger l'implémentation OpenStreetMap
+**Priorité** : CRITIQUE ⚠️
+**Estimation** : 15 min
+
+**Fichier** : `templates/admin/lawyer/form.html.twig`
+
+**Problème actuel (ligne 151) :**
+```twig
+<div class="card-body">
+    {{ form_row(form.address) }}
+    <div id="address-map"></div>  {# Carte custom sans recherche #}
+</div>
+```
+
+**Correction :**
+```twig
+<div class="card-body">
+    {{ form_row(form.address) }}
+    {% include 'admin/_osm_address_map.html.twig' with {'map_id': 'lawyer-address-map'} %}
+</div>
+```
+
+**Suppression :** Retirer le code JavaScript custom (lignes 219-317)
+
+**Test :**
+1. Accéder à `/admin/lawyers/new`
+2. Vérifier la présence de la barre de recherche Geocoder
+3. Tester la recherche d'une adresse à Abidjan
+4. Vérifier le drag du marqueur
+5. Valider que les champs lat/lng/line1/city sont bien remplis
+
+#### Tâche 2.2 : Ajouter les styles manquants pour la carte
+**Priorité** : MOYENNE
+**Estimation** : 5 min
+
+**Fichier** : `templates/admin/lawyer/form.html.twig`
+
+**Ajouter dans le block stylesheets :**
+```twig
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.css" />
+{% endblock %}
+```
+
+**Note :** Ces styles sont déjà inclus dans `_osm_address_map.html.twig` mais il est bon de les déclarer explicitement.
+
+#### Tâche 2.3 : Améliorer la validation des collections
+**Priorité** : BASSE
+**Estimation** : 1h
+
+**Objectif :** Garantir qu'un Lawyer ou Cabinet a au moins 1 email et 1 téléphone
+
+**Implémentation :**
+
+**A. Contraintes Symfony :**
+```php
+// src/Entity/Cabinet.php
+use Symfony\Component\Validator\Constraints as Assert;
+
+#[ORM\OneToMany(targetEntity: Phone::class, mappedBy: 'cabinet', cascade: ['persist', 'remove'])]
+#[Assert\Count(min: 1, minMessage: 'Vous devez ajouter au moins un numéro de téléphone')]
+private Collection $phones;
+
+#[ORM\OneToMany(targetEntity: EmailAddress::class, mappedBy: 'cabinet', cascade: ['persist', 'remove'])]
+#[Assert\Count(min: 1, minMessage: 'Vous devez ajouter au moins une adresse email')]
+private Collection $emails;
+```
+
+**B. UX côté client (remplacer alert) :**
+```javascript
+// templates/admin/cabinet/form.html.twig (ligne 422)
+if (itemCount <= 1) {
+    // Créer un toast Bootstrap
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-danger border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    Vous devez conserver au moins un élément
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    // Afficher le toast...
+    return;
+}
+```
+
+#### Tâche 2.4 : Améliorer la génération du mot de passe par défaut
+**Priorité** : MOYENNE
+**Estimation** : 30 min
+
+**Fichier** : `src/Service/UserCreationService.php`
+
+**Option A : Mot de passe aléatoire**
+```php
+public function createUserForLawyer(Lawyer $lawyer): ?User
+{
+    // ... code existant ...
+
+    // Générer un mot de passe aléatoire sécurisé
+    $randomPassword = $this->generateRandomPassword();
+    $hashedPassword = $this->passwordHasher->hashPassword($user, $randomPassword);
+    $user->setPassword($hashedPassword);
+
+    // Forcer le changement de mot de passe à la première connexion
+    $user->setMustChangePassword(true);
+
+    $this->em->persist($user);
+    $this->em->flush();
+
+    // Retourner le mot de passe en clair (pour que le contrôleur puisse l'afficher)
+    $user->plainPassword = $randomPassword; // Propriété temporaire non persistée
+
+    return $user;
+}
+
+private function generateRandomPassword(int $length = 12): string
+{
+    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
+    $password = '';
+    $max = strlen($chars) - 1;
+
+    for ($i = 0; $i < $length; $i++) {
+        $password .= $chars[random_int(0, $max)];
+    }
+
+    return $password;
+}
+```
+
+**Mise à jour du contrôleur :**
+```php
+// src/Controller/Admin/LawyerAdminController.php (ligne 93)
+$user = $this->userCreationService->createUserForLawyer($lawyer);
+
+if ($user) {
+    $plainPassword = $user->plainPassword ?? 'ChangeMe2024!'; // Fallback
+    $this->addFlash('success', sprintf(
+        'Avocat créé avec succès. Compte créé avec le mot de passe : <strong>%s</strong><br>
+        <small class="text-muted">À communiquer à l\'utilisateur. Il devra le changer à la première connexion.</small>',
+        $plainPassword
+    ));
+}
+```
+
+#### Tâche 2.5 : Améliorer l'affichage du profil Lawyer (self_edit)
+**Priorité** : BASSE
+**Estimation** : 30 min
+
+**Fichier** : `templates/admin/lawyer/profile.html.twig`
+
+**Problème actuel :** Template simple, pourrait être plus informatif
+
+**Améliorations possibles :**
+1. Afficher clairement les champs modifiables vs non modifiables
+2. Ajouter un encadré "Informations du cabinet" (lecture seule)
+3. Afficher le rôle de l'utilisateur
+4. Message d'aide expliquant les restrictions
+
+**Exemple :**
+```twig
+<div class="alert alert-info mb-3">
+    <i class="bi bi-info-circle"></i>
+    <strong>Note :</strong> Vous pouvez modifier votre profil, biographie, photo et coordonnées.
+    Pour modifier votre numéro au barreau ou votre cabinet de rattachement, contactez votre responsable de cabinet.
+</div>
+
+{% if lawyer.cabinet %}
+    <div class="card mb-3 bg-light">
+        <div class="card-header">
+            <i class="bi bi-building"></i>
+            Mon Cabinet
+        </div>
+        <div class="card-body">
+            <h5>{{ lawyer.cabinet.name }}</h5>
+            <p class="mb-0 text-muted">
+                {% if lawyer.cabinet.managingPartner.id == lawyer.id %}
+                    <span class="badge bg-primary">Responsable de cabinet</span>
+                {% else %}
+                    Responsable : {{ lawyer.cabinet.managingPartner.fullName }}
+                {% endif %}
+            </p>
+        </div>
+    </div>
+{% endif %}
+```
+
+---
+
+## 📊 RÉCAPITULATIF DES PRIORITÉS
+
+### 🔴 Critique (À faire en priorité)
+1. **Tâche 2.1** : Corriger OpenStreetMap dans formulaire Lawyer (15 min)
+
+### 🟠 Haute
+2. **Tâche 1.1** : Clarifier les "pièces jointes" Cabinet (discussion 30 min)
+
+### 🟡 Moyenne (selon résultats de 1.1)
+3. **Tâche 1.2 à 1.4** : Implémenter les pièces jointes Cabinet (4h30 total)
+4. **Tâche 2.4** : Améliorer génération mot de passe (30 min)
+5. **Tâche 2.2** : Ajouter styles manquants carte (5 min)
+
+### 🟢 Basse (Améliorations UX)
+6. **Tâche 1.6** : UX formulaire Cabinet (1h)
+7. **Tâche 2.3** : Validation collections (1h)
+8. **Tâche 2.5** : Améliorer profil Lawyer (30 min)
+9. **Tâche 1.5** : Exposer documents dans API (30 min, si nécessaire)
+
+---
+
+## 🚀 ORDRE D'EXÉCUTION RECOMMANDÉ
+
+### Sprint 1 (1-2 heures)
+1. ✅ **Tâche 2.1** : Corriger OpenStreetMap Lawyer (15 min)
+2. ✅ **Tâche 2.2** : Ajouter styles manquants (5 min)
+3. ✅ **Tâche 1.1** : Discussion pièces jointes (30 min)
+
+### Sprint 2 (Si pièces jointes nécessaires : 5 heures)
+4. ✅ **Tâche 1.2** : Créer entité CabinetDocument (1h)
+5. ✅ **Tâche 1.3** : Ajouter champ documents formulaire (1h30)
+6. ✅ **Tâche 1.4** : Implémenter upload multiple (2h)
+7. ✅ **Tâche 1.5** : Exposer dans API (30 min, optionnel)
+
+### Sprint 3 (Améliorations : 3-4 heures)
+8. ✅ **Tâche 2.4** : Améliorer mot de passe (30 min)
+9. ✅ **Tâche 1.6** : UX formulaire Cabinet (1h)
+10. ✅ **Tâche 2.3** : Validation collections (1h)
+11. ✅ **Tâche 2.5** : Améliorer profil Lawyer (30 min)
+
+---
+
+## 📝 NOTES TECHNIQUES IMPORTANTES
+
+### Commandes Docker utiles
+```bash
+# Nettoyer le cache Symfony
+docker-compose exec -T php php bin/console cache:clear
+
+# Créer une migration
+docker-compose exec php php bin/console make:migration
+
+# Exécuter les migrations
+docker-compose exec php php bin/console doctrine:migrations:migrate
+
+# Créer une entité
+docker-compose exec php php bin/console make:entity
+
+# Lister les routes
+docker-compose exec php php bin/console debug:router
+
+# Vérifier les permissions
+docker-compose exec php php bin/console debug:security
+```
+
+### Structure de la base de données actuelle
+
+**Tables principales :**
+- `cabinet` : Cabinets juridiques
+- `lawyer` : Avocats
+- `user` : Comptes utilisateurs
+- `cabinet_type` : Types de cabinets (Cabinet, SCP, SCPA)
+- `specialty` : Spécialités juridiques
+- `address` : Adresses complètes
+- `phone` : Téléphones (liaison Cabinet/Lawyer)
+- `email_address` : Emails (liaison Cabinet/Lawyer)
+- `lawyer_specialty` : Table de liaison Many-to-Many
+
+### Sécurité
+
+**Points validés :**
+- ✅ Hashage des mots de passe avec `auto` algorithm (Argon2 ou bcrypt)
+- ✅ CSRF activé sur les formulaires
+- ✅ Voters pour contrôle d'accès granulaire
+- ✅ Hiérarchie de rôles correctement configurée
+- ✅ Force le changement de mot de passe à la première connexion
+
+**Points d'attention :**
+- ⚠️ Mot de passe par défaut identique pour tous → Recommandation d'utiliser un générateur aléatoire
+- ⚠️ Pas de notification par email (admin doit communiquer manuellement)
+
+### API publique
+
+**Caractéristiques :**
+- ✅ Endpoints `/api/cabinets` et `/api/lawyers` fonctionnels
+- ✅ Pagination implémentée
+- ✅ Filtres de recherche opérationnels
+- ✅ CORS configuré (Nelmio CORS Bundle)
+- ✅ Serializers gèrent les champs dépréciés (fallback)
+- ✅ URLs absolues pour les images/logos
+
+---
+
+## 🎯 VALIDATION FINALE
+
+### Checklist de validation Phase 1 (Cabinet)
+
+- [ ] Les "pièces jointes" sont clarifiées avec l'utilisateur
+- [ ] Si nécessaire : Entité `CabinetDocument` créée et migrée
+- [ ] Si nécessaire : Upload multiple fonctionnel dans le formulaire
+- [ ] Si nécessaire : Documents exposés dans l'API (si requis)
+- [ ] Formulaire d'édition affiche un lien vers la gestion des avocats
+- [ ] Test création Cabinet avec logo + documents
+- [ ] Test modification Cabinet avec remplacement de logo
+- [ ] Test désignation d'un responsable → promotion RESPO_CABINET
+- [ ] Test rattachement/détachement d'avocats
+
+### Checklist de validation Phase 2 (Lawyer)
+
+- [ ] Template `lawyer/form.html.twig` utilise `_osm_address_map.html.twig`
+- [ ] Barre de recherche Geocoder visible et fonctionnelle
+- [ ] Recherche d'adresse retourne des résultats sélectionnables
+- [ ] Clic sur la carte place un marqueur et remplit les champs
+- [ ] Marqueur draggable met à jour les coordonnées
+- [ ] Test création Lawyer → compte User créé automatiquement
+- [ ] Mot de passe par défaut affiché dans le flash message
+- [ ] Test première connexion → redirection vers changement de mot de passe
+- [ ] Test RESPO_CABINET → ne peut créer que des lawyers de son cabinet
+- [ ] Test LAWYER → peut modifier uniquement son profil (pas cabinet, pas barNumber)
+- [ ] Validation collections (au moins 1 email, 1 phone) fonctionne
+- [ ] Messages d'erreur UX agréables (toasts au lieu d'alert)
+
+---
+
+## 📞 CONTACT ET SUPPORT
+
+Pour toute question ou clarification sur cette analyse :
+- Consulter la documentation Symfony : https://symfony.com/doc/current/index.html
+- Vérifier les logs : `docker-compose logs -f php`
+- Consulter les routes : `docker-compose exec php php bin/console debug:router`
+
+---
+
+**Document généré le** : 2025-01-XX
+**Version du projet** : Symfony 6.4
+**Auteur de l'analyse** : Claude Code (Anthropic)

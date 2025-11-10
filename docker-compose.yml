@@ -8,6 +8,7 @@ services:
     working_dir: /var/www/html
     volumes:
       - .:/var/www/html
+      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
     environment:
       - DATABASE_URL=mysql://symfony:symfony_password@mysql:3306/symfony_db?serverVersion=8.0
     depends_on:
@@ -16,10 +17,13 @@ services:
       - symfony-network
     command: >
       bash -c "
-      apt-get update && apt-get install -y git unzip libzip-dev libicu-dev &&
-      docker-php-ext-install pdo pdo_mysql zip intl opcache &&
-      if [ ! -f /usr/local/bin/composer ]; then
-        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer;
+      if [ ! -f /var/www/html/.docker-php-setup-done ]; then
+        apt-get update && apt-get install -y git unzip libzip-dev libicu-dev &&
+        docker-php-ext-install pdo pdo_mysql zip intl opcache &&
+        if [ ! -f /usr/local/bin/composer ]; then
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer;
+        fi &&
+        touch /var/www/html/.docker-php-setup-done;
       fi &&
       if [ ! -d vendor ]; then
         composer install --no-interaction;

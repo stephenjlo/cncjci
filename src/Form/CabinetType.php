@@ -43,7 +43,7 @@ class CabinetType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                 ],
-                'help' => '<small class="form-text text-info">Laissez vide pour génération automatique à partir du nom</small>',
+                'help' => '<small class="form-help-info"><i class="bi bi-info-circle"></i><span>Laissez vide pour génération automatique à partir du nom</span></small>',
                 'help_html' => true,
             ])
             ->add('typeEntity', EntityType::class, [
@@ -112,7 +112,7 @@ class CabinetType extends AbstractType
                     return $repository->createQueryBuilder('l')
                         ->orderBy('l.lastName', 'ASC');
                 },
-                'help' => '<small class="form-text text-info">Vous pouvez désigner un avocat comme responsable. Les avocats doivent être créés au préalable.</small>',
+                'help' => '<small class="form-help-info"><i class="bi bi-info-circle"></i><span>Vous pouvez désigner un avocat comme responsable. Les avocats doivent être créés au préalable.</span></small>',
                 'help_html' => true,
             ]);
 
@@ -130,7 +130,7 @@ class CabinetType extends AbstractType
                     return $repository->createQueryBuilder('l')
                         ->orderBy('l.lastName', 'ASC');
                 },
-                'help' => '<small class="form-text text-info">Recherchez et sélectionnez les avocats à rattacher (multi-sélection). Les avocats doivent être créés au préalable.</small>',
+                'help' => '<small class="form-help-info"><i class="bi bi-info-circle"></i><span>Recherchez et sélectionnez les avocats à rattacher (multi-sélection). Les avocats doivent être créés au préalable.</span></small>',
                 'help_html' => true,
             ]);
         }

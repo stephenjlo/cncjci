@@ -173,8 +173,7 @@
                             {% for lawyer in availableLawyers %}
                                 <div class="list-group-item d-flex justify-content-between align-items-center lawyer-item"
                                      data-lawyer-name="{{ lawyer.fullName|lower }}"
-                                     data-lawyer-cabinet="{{ lawyer.cabinet ? lawyer.cabinet.name|lower : 'sans cabinet' }}"
-                                     style="display: none;">
+                                     data-lawyer-cabinet="{{ lawyer.cabinet ? lawyer.cabinet.name|lower : 'sans cabinet' }}">
                                     <div>
                                         {% if lawyer.photoUrl %}
                                             <img src="{{ lawyer.photoUrl }}" alt="{{ lawyer.fullName }}" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">

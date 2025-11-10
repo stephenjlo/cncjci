@@ -143,12 +143,12 @@
             <div class="card mt-3">
                 <div class="card-header">
                     <i class="bi bi-geo-alt"></i>
-                    Adresse
+                    Adresse et Localisation
                 </div>
                 <div class="card-body">
                     {{ form_row(form.address) }}
 
-                    <div id="address-map"></div>
+                    {% include 'admin/_osm_address_map.html.twig' with {'map_id': 'lawyer-address-map'} %}
                 </div>
             </div>
 
@@ -216,13 +216,14 @@
 
 {% block javascripts %}
     {{ parent() }}
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Gestion des collections (phones, emails)
             function addCollectionItem(collectionId, buttonId) {
                 const collection = document.getElementById(collectionId);
                 const addButton = document.getElementById(buttonId);
+
+                if (!collection || !addButton) return;
 
                 addButton.addEventListener('click', function() {
                     const prototype = collection.dataset.prototype;
@@ -247,72 +248,6 @@
 
             addCollectionItem('phones-collection', 'add-phone');
             addCollectionItem('emails-collection', 'add-email');
-
-            // Carte OpenStreetMap
-            const mapElement = document.getElementById('address-map');
-            if (mapElement) {
-                const latInput = document.querySelector('input[id$="_lat"]');
-                const lngInput = document.querySelector('input[id$="_lng"]');
-                const line1Input = document.querySelector('input[id$="_line1"]');
-
-                const initialLat = latInput && latInput.value ? parseFloat(latInput.value) : 5.345317;
-                const initialLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : -4.024429;
-
-                const map = L.map('address-map').setView([initialLat, initialLng], 12);
-
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(map);
-
-                let marker = null;
-
-                if (latInput.value && lngInput.value) {
-                    marker = L.marker([initialLat, initialLng]).addTo(map);
-                    map.setView([initialLat, initialLng], 15);
-                }
-
-                map.on('click', function(e) {
-                    const lat = e.latlng.lat;
-                    const lng = e.latlng.lng;
-
-                    latInput.value = lat;
-                    lngInput.value = lng;
-
-                    if (marker) {
-                        map.removeLayer(marker);
-                    }
-                    marker = L.marker([lat, lng]).addTo(map);
-
-                    // Géocodage inverse
-                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.address && data.address.road) {
-                                line1Input.value = data.address.road;
-                            }
-                        });
-                });
-
-                // Autocomplete sur line1
-                let searchTimeout;
-                line1Input.addEventListener('input', function() {
-                    clearTimeout(searchTimeout);
-                    const query = this.value;
-
-                    if (query.length < 3) return;
-
-                    searchTimeout = setTimeout(() => {
-                        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, Abidjan, Côte d'Ivoire&limit=5`)
-                            .then(response => response.json())
-                            .then(results => {
-                                if (results.length > 0) {
-                                    // Afficher les résultats (implémentation simplifiée)
-                                    console.log('Résultats:', results);
-                                }
-                            });
-                    }, 500);
-                });
-            }
         });
     </script>
 {% endblock %}

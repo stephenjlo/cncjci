@@ -79,6 +79,9 @@ class CabinetController extends AbstractController
         $logoUrl = $cabinet->getLogoUrl();
         if (empty($logoUrl)) {
             $logoUrl = $this->fileUploadService->getDefaultCabinetLogo();
+        } else {
+            // Convertir en URL absolue pour l'API
+            $logoUrl = $this->fileUploadService->getAbsoluteUrl($logoUrl);
         }
 
         return [
@@ -180,7 +183,7 @@ class CabinetController extends AbstractController
                 'firstName' => $mp->getFirstName(),
                 'lastName'  => $mp->getLastName(),
                 'slug'      => $mp->getSlug(),
-                'photoUrl'  => $mp->getPhotoUrl(),
+                'photoUrl'  => $this->fileUploadService->getAbsoluteUrl($mp->getPhotoUrl()),
             ];
         }
 
@@ -209,12 +212,15 @@ class CabinetController extends AbstractController
             'firstName' => $l->getFirstName(),
             'lastName'  => $l->getLastName(),
             'slug'      => $l->getSlug(),
-            'photoUrl'  => $l->getPhotoUrl(),
+            'photoUrl'  => $this->fileUploadService->getAbsoluteUrl($l->getPhotoUrl()),
         ], $lawyersCollection);
 
         $logoUrl = $cabinet->getLogoUrl();
         if (empty($logoUrl)) {
             $logoUrl = $this->fileUploadService->getDefaultCabinetLogo();
+        } else {
+            // Convertir en URL absolue pour l'API
+            $logoUrl = $this->fileUploadService->getAbsoluteUrl($logoUrl);
         }
 
         return [
