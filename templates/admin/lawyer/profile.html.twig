@@ -4,13 +4,37 @@
 
 {% block stylesheets %}
     {{ parent() }}
+    {# Select2 CSS #}
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
+    {# Leaflet + Geocoder CSS #}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.css" />
+
     <style>
         #address-map {
             height: 400px;
             margin-top: 1rem;
             border-radius: 0.375rem;
             border: 1px solid #dee2e6;
+        }
+
+        /* Style pour les champs en lecture seule */
+        input[readonly] {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        /* Style pour le geocoder */
+        .leaflet-control-geocoder {
+            background-color: white;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+        }
+        .leaflet-control-geocoder-form input {
+            padding: 5px 10px;
+            width: 300px;
+            font-size: 14px;
         }
     </style>
 {% endblock %}
@@ -40,7 +64,7 @@
 
     <div class="row">
         <div class="col-lg-8">
-            {{ form_start(form) }}
+            {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
 
             {# Informations personnelles #}
             <div class="card mb-3">
@@ -53,14 +77,22 @@
                         <div class="col-md-6">
                             {{ form_row(form.firstName, {
                                 'label': 'Prénom',
-                                'attr': {'class': 'form-control', 'placeholder': 'Jean'}
+                                'attr': {'class': 'form-control', 'placeholder': 'Jean', 'readonly': true}
                             }) }}
+                            <small class="form-text text-muted">
+                                <i class="bi bi-lock"></i>
+                                Ce champ ne peut être modifié que par un administrateur
+                            </small>
                         </div>
                         <div class="col-md-6">
                             {{ form_row(form.lastName, {
                                 'label': 'Nom',
-                                'attr': {'class': 'form-control', 'placeholder': 'KOUASSI'}
+                                'attr': {'class': 'form-control', 'placeholder': 'KOUASSI', 'readonly': true}
                             }) }}
+                            <small class="form-text text-muted">
+                                <i class="bi bi-lock"></i>
+                                Ce champ ne peut être modifié que par un administrateur
+                            </small>
                         </div>
                     </div>
 
@@ -83,10 +115,18 @@
                         'attr': {'class': 'form-control', 'rows': '6', 'placeholder': 'Présentez votre parcours, vos domaines d\'expertise, vos expériences...'}
                     }) }}
 
-                    {{ form_row(form.photoUrl, {
-                        'label': 'URL Photo de profil',
-                        'attr': {'class': 'form-control', 'placeholder': 'https://...'}
-                    }) }}
+                    {{ form_row(form.photoFile) }}
+                    {% if lawyer.photoUrl %}
+                        <div class="mt-2">
+                            <img src="{{ lawyer.photoUrl }}" alt="Photo actuelle" class="img-thumbnail" style="max-height: 100px;">
+                            <div class="mt-2">
+                                <small class="d-block text-muted">
+                                    <i class="bi bi-link-45deg"></i> URL actuelle:
+                                    <code>{{ lawyer.photoUrl }}</code>
+                                </small>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -119,37 +159,40 @@
                         <i class="bi bi-telephone-fill text-primary"></i>
                         Téléphones
                     </h6>
-                    <div id="phones-collection"
-                         data-prototype="{{ form_widget(form.phones.vars.prototype)|e('html_attr') }}"
-                         class="mb-3">
+                    <div id="phones-collection" class="mb-3"
+                         data-prototype="
+                            <div class=&quot;row mb-2 phone-item align-items-center&quot;>
+                                <div class=&quot;col-md-4&quot;>
+                                    {{ form_widget(form.phones.vars.prototype.label)|e('html_attr') }}
+                                </div>
+                                <div class=&quot;col-md-6&quot;>
+                                    {{ form_widget(form.phones.vars.prototype.number)|e('html_attr') }}
+                                </div>
+                                <div class=&quot;col-md-2 text-end&quot;>
+                                    <button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-phone&quot; title=&quot;Supprimer&quot;>
+                                        <i class=&quot;bi bi-trash&quot;></i>
+                                    </button>
+                                </div>
+                                {{ form_widget(form.phones.vars.prototype.isPrimary)|e('html_attr') }}
+                                {{ form_widget(form.phones.vars.prototype.position)|e('html_attr') }}
+                            </div>">
                         {% for phone in form.phones %}
-                            <div class="row mb-2 phone-item">
-                                <div class="col-md-3">
-                                    {{ form_widget(phone.label, {
-                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': 'Mobile'}
-                                    }) }}
-                                </div>
+                            <div class="row mb-2 phone-item align-items-center">
                                 <div class="col-md-4">
-                                    {{ form_widget(phone.number, {
-                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': '+225 XX XX XX XX'}
-                                    }) }}
+                                    {{ form_widget(phone.label) }}
+                                    {{ form_errors(phone.label) }}
                                 </div>
-                                <div class="col-md-2">
-                                    <div class="form-check">
-                                        {{ form_widget(phone.isPrimary, {'attr': {'class': 'form-check-input'}}) }}
-                                        <label class="form-check-label small">Principal</label>
-                                    </div>
+                                <div class="col-md-6">
+                                    {{ form_widget(phone.number) }}
+                                    {{ form_errors(phone.number) }}
                                 </div>
-                                <div class="col-md-2">
-                                    {{ form_widget(phone.position, {
-                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': '0'}
-                                    }) }}
-                                </div>
-                                <div class="col-md-1">
-                                    <button type="button" class="btn btn-sm btn-danger remove-phone">
+                                <div class="col-md-2 text-end">
+                                    <button type="button" class="btn btn-sm btn-danger remove-phone" title="Supprimer">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
+                                {{ form_widget(phone.isPrimary) }}
+                                {{ form_widget(phone.position) }}
                             </div>
                         {% endfor %}
                     </div>
@@ -164,32 +207,56 @@
                         <i class="bi bi-envelope-fill text-primary"></i>
                         Emails
                     </h6>
-                    <div id="emails-collection"
-                         data-prototype="{{ form_widget(form.emails.vars.prototype)|e('html_attr') }}"
-                         class="mb-3">
-                        {% for email in form.emails %}
-                            <div class="row mb-2 email-item">
-                                <div class="col-md-3">
-                                    {{ form_widget(email.label, {
-                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': 'Professionnel'}
-                                    }) }}
+                    <div id="emails-collection" class="mb-3"
+                         data-prototype="
+                            <div class=&quot;row mb-2 email-item align-items-center&quot;>
+                                <div class=&quot;col-md-4&quot;>
+                                    {{ form_widget(form.emails.vars.prototype.label)|e('html_attr') }}
                                 </div>
-                                <div class="col-md-5">
-                                    {{ form_widget(email.email, {
-                                        'attr': {'class': 'form-control form-control-sm', 'placeholder': 'email@example.com'}
-                                    }) }}
+                                <div class=&quot;col-md-6&quot;>
+                                    {{ form_widget(form.emails.vars.prototype.email)|e('html_attr') }}
                                 </div>
-                                <div class="col-md-2">
-                                    <div class="form-check">
-                                        {{ form_widget(email.isPrimary, {'attr': {'class': 'form-check-input'}}) }}
-                                        <label class="form-check-label small">Principal</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-1">
-                                    <button type="button" class="btn btn-sm btn-danger remove-email">
-                                        <i class="bi bi-trash"></i>
+                                <div class=&quot;col-md-2 text-end&quot;>
+                                    <button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-email&quot; title=&quot;Supprimer&quot;>
+                                        <i class=&quot;bi bi-trash&quot;></i>
                                     </button>
                                 </div>
+                                {{ form_widget(form.emails.vars.prototype.isPrimary)|e('html_attr') }}
+                                {{ form_widget(form.emails.vars.prototype.position)|e('html_attr') }}
+                            </div>">
+                        {% for email in form.emails %}
+                            <div class="row mb-2 email-item align-items-center">
+                                <div class="col-md-4">
+                                    {{ form_widget(email.label) }}
+                                    {{ form_errors(email.label) }}
+                                </div>
+                                <div class="col-md-6">
+                                    {% if loop.first %}
+                                        {# Premier email = email de connexion, non modifiable #}
+                                        {{ form_widget(email.email, {'attr': {'readonly': true, 'class': 'form-control form-control-sm'}}) }}
+                                        <small class="form-text text-muted d-block mt-1">
+                                            <i class="bi bi-lock"></i>
+                                            Email de connexion (non modifiable)
+                                        </small>
+                                    {% else %}
+                                        {{ form_widget(email.email) }}
+                                    {% endif %}
+                                    {{ form_errors(email.email) }}
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    {% if not loop.first %}
+                                        <button type="button" class="btn btn-sm btn-danger remove-email" title="Supprimer">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    {% else %}
+                                        {# Pas de bouton supprimer pour l'email principal #}
+                                        <span class="text-muted" title="Email principal non supprimable">
+                                            <i class="bi bi-shield-check"></i>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                {{ form_widget(email.isPrimary) }}
+                                {{ form_widget(email.position) }}
                             </div>
                         {% endfor %}
                     </div>
@@ -353,17 +420,64 @@
 
 {% block javascripts %}
     {{ parent() }}
+    {# Select2 JS #}
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/fr.js"></script>
+
+    {# Leaflet + Geocoder JS #}
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // ═══════════════════════════════════════════════════
+            // SELECT2 POUR LES SPÉCIALITÉS
+            // ═══════════════════════════════════════════════════
+            $('#lawyer_specialties').select2({
+                theme: 'bootstrap-5',
+                language: 'fr',
+                placeholder: 'Sélectionnez vos spécialités',
+                allowClear: true,
+                width: '100%'
+            });
+            // ═══════════════════════════════════════════════════
             // GESTION DES COLLECTIONS (Phones & Emails)
             // ═══════════════════════════════════════════════════
+
+            /**
+             * Met à jour les positions et isPrimary des éléments d'une collection
+             */
+            function updateCollectionPositions(collectionId) {
+                const collection = document.getElementById(collectionId);
+                if (!collection) return;
+
+                const items = collection.querySelectorAll('.phone-item, .email-item');
+                items.forEach((item, index) => {
+                    // Mettre à jour position
+                    const positionInput = item.querySelector('input[id$="_position"]');
+                    if (positionInput) {
+                        positionInput.value = index;
+                    }
+
+                    // Mettre à jour isPrimary (le premier est toujours primary)
+                    const isPrimaryInput = item.querySelector('input[id$="_isPrimary"]');
+                    if (isPrimaryInput) {
+                        if (isPrimaryInput.type === 'checkbox') {
+                            isPrimaryInput.checked = (index === 0);
+                        } else {
+                            isPrimaryInput.value = index === 0 ? '1' : '0';
+                        }
+                    }
+                });
+            }
+
             function initCollection(collectionId, addButtonId, itemClass) {
                 const collection = document.getElementById(collectionId);
                 const addButton = document.getElementById(addButtonId);
 
                 if (!collection || !addButton) return;
+
+                // Initialiser les positions au chargement
+                updateCollectionPositions(collectionId);
 
                 // Ajout d'un élément
                 addButton.addEventListener('click', function() {
@@ -374,6 +488,9 @@
                     const wrapper = document.createElement('div');
                     wrapper.innerHTML = newForm;
                     collection.appendChild(wrapper.firstElementChild);
+
+                    // Mettre à jour les positions après ajout
+                    updateCollectionPositions(collectionId);
                 });
 
                 // Suppression d'un élément
@@ -381,8 +498,26 @@
                     const removeBtn = e.target.closest('.remove-phone, .remove-email');
                     if (removeBtn) {
                         const item = e.target.closest('.' + itemClass);
+                        const itemCount = collection.querySelectorAll('.' + itemClass).length;
+
+                        if (itemCount <= 1) {
+                            alert('Vous devez conserver au moins un élément');
+                            return;
+                        }
+
+                        // Pour les emails, empêcher la suppression du premier (email de connexion)
+                        if (itemClass === 'email-item') {
+                            const allItems = collection.querySelectorAll('.' + itemClass);
+                            if (item === allItems[0]) {
+                                alert('L\'email de connexion ne peut pas être supprimé');
+                                return;
+                            }
+                        }
+
                         if (item && confirm('Supprimer cet élément ?')) {
                             item.remove();
+                            // Mettre à jour les positions après suppression
+                            updateCollectionPositions(collectionId);
                         }
                     }
                 });
@@ -392,96 +527,160 @@
             initCollection('emails-collection', 'add-email', 'email-item');
 
             // ═══════════════════════════════════════════════════
-            // CARTE OPENSTREETMAP
+            // CARTE OPENSTREETMAP AVEC GEOCODER
             // ═══════════════════════════════════════════════════
             const mapElement = document.getElementById('address-map');
             if (mapElement) {
                 const latInput = document.querySelector('input[id$="_lat"]');
                 const lngInput = document.querySelector('input[id$="_lng"]');
                 const line1Input = document.querySelector('input[id$="_line1"]');
+                const line2Input = document.querySelector('input[id$="_line2"]');
                 const cityInput = document.querySelector('input[id$="_city"]');
+                const postalCodeInput = document.querySelector('input[id$="_postalCode"]');
 
+                // Position initiale (Abidjan par défaut ou coordonnées existantes)
                 const initialLat = latInput && latInput.value ? parseFloat(latInput.value) : 5.345317;
                 const initialLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : -4.024429;
+                const initialZoom = (latInput && latInput.value) ? 15 : 12;
 
-                const map = L.map('address-map').setView([initialLat, initialLng], 12);
+                // Initialiser la carte
+                const map = L.map('address-map').setView([initialLat, initialLng], initialZoom);
 
+                // Couche OpenStreetMap
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors',
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                     maxZoom: 19
                 }).addTo(map);
 
                 let marker = null;
 
+                // Ajouter un marqueur si des coordonnées existent
                 if (latInput.value && lngInput.value) {
-                    marker = L.marker([initialLat, initialLng]).addTo(map);
-                    map.setView([initialLat, initialLng], 15);
-                }
+                    marker = L.marker([initialLat, initialLng], {
+                        draggable: true,
+                        title: 'Faites glisser pour ajuster la position'
+                    }).addTo(map);
 
-                map.on('click', function(e) {
-                    const lat = e.latlng.lat;
-                    const lng = e.latlng.lng;
-
-                    latInput.value = lat;
-                    lngInput.value = lng;
-
-                    if (marker) {
-                        map.removeLayer(marker);
-                    }
-                    marker = L.marker([lat, lng]).addTo(map);
-
-                    // Géocodage inverse
-                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.address) {
-                                if (data.address.road && !line1Input.value) {
-                                    line1Input.value = data.address.road;
-                                }
-                                if (data.address.city && !cityInput.value) {
-                                    cityInput.value = data.address.city;
-                                } else if (data.address.town && !cityInput.value) {
-                                    cityInput.value = data.address.town;
-                                }
-                            }
-                        })
-                        .catch(err => console.error('Erreur géocodage inverse:', err));
-                });
-
-                // Recherche d'adresse
-                let searchTimeout;
-                if (line1Input) {
-                    line1Input.addEventListener('input', function() {
-                        clearTimeout(searchTimeout);
-                        const query = this.value;
-
-                        if (query.length < 3) return;
-
-                        searchTimeout = setTimeout(() => {
-                            const searchQuery = `${query}, ${cityInput.value || 'Abidjan'}, Côte d'Ivoire`;
-
-                            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`)
-                                .then(response => response.json())
-                                .then(results => {
-                                    if (results.length > 0) {
-                                        const result = results[0];
-                                        const lat = parseFloat(result.lat);
-                                        const lng = parseFloat(result.lon);
-
-                                        latInput.value = lat;
-                                        lngInput.value = lng;
-
-                                        if (marker) {
-                                            map.removeLayer(marker);
-                                        }
-                                        marker = L.marker([lat, lng]).addTo(map);
-                                        map.setView([lat, lng], 15);
-                                    }
-                                })
-                                .catch(err => console.error('Erreur recherche:', err));
-                        }, 1000);
+                    // Drag du marqueur
+                    marker.on('dragend', function(e) {
+                        const position = e.target.getLatLng();
+                        updatePosition(position.lat, position.lng, true);
                     });
                 }
+
+                // Plugin de recherche Geocoder
+                const geocoder = L.Control.Geocoder.nominatim({
+                    geocodingQueryParams: {
+                        countrycodes: 'ci', // Limiter à la Côte d'Ivoire
+                        'accept-language': 'fr'
+                    }
+                });
+
+                const geocoderControl = L.Control.geocoder({
+                    geocoder: geocoder,
+                    defaultMarkGeocode: false,
+                    placeholder: 'Rechercher une adresse à Abidjan...',
+                    errorMessage: 'Aucun résultat trouvé'
+                }).on('markgeocode', function(e) {
+                    const latlng = e.geocode.center;
+                    const address = e.geocode;
+
+                    // Mettre à jour la position
+                    updatePosition(latlng.lat, latlng.lng, false);
+
+                    // Vider et remplir les champs d'adresse depuis les résultats de recherche
+                    line1Input.value = '';
+                    line2Input.value = '';
+                    cityInput.value = '';
+                    if (postalCodeInput) postalCodeInput.value = '';
+
+                    if (address.properties && address.properties.address) {
+                        const addr = address.properties.address;
+
+                        // Remplir uniquement si les valeurs existent et sont valides
+                        if (addr.road && addr.road.trim() !== '') {
+                            line1Input.value = addr.road;
+                        }
+                        if (addr.suburb && addr.suburb.trim() !== '') {
+                            line2Input.value = addr.suburb;
+                        }
+                        if (addr.city && addr.city.trim() !== '') {
+                            cityInput.value = addr.city;
+                        } else if (addr.town && addr.town.trim() !== '') {
+                            cityInput.value = addr.town;
+                        } else if (addr.village && addr.village.trim() !== '') {
+                            cityInput.value = addr.village;
+                        }
+                        if (addr.postcode && addr.postcode.trim() !== '' && postalCodeInput) {
+                            postalCodeInput.value = addr.postcode;
+                        }
+                    }
+
+                    // Centrer la carte
+                    map.setView(latlng, 16);
+                }).addTo(map);
+
+                // Fonction pour mettre à jour la position
+                function updatePosition(lat, lng, reverseGeocode = false) {
+                    latInput.value = lat.toFixed(6);
+                    lngInput.value = lng.toFixed(6);
+
+                    // Mettre à jour ou créer le marqueur
+                    if (marker) {
+                        marker.setLatLng([lat, lng]);
+                    } else {
+                        marker = L.marker([lat, lng], {
+                            draggable: true,
+                            title: 'Faites glisser pour ajuster la position'
+                        }).addTo(map);
+
+                        marker.on('dragend', function(e) {
+                            const position = e.target.getLatLng();
+                            updatePosition(position.lat, position.lng, true);
+                        });
+                    }
+
+                    // Géocodage inverse pour récupérer l'adresse au clic/drag
+                    if (reverseGeocode) {
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=fr`)
+                            .then(response => response.json())
+                            .then(data => {
+                                // Vider tous les champs d'abord
+                                line1Input.value = '';
+                                line2Input.value = '';
+                                cityInput.value = '';
+                                if (postalCodeInput) postalCodeInput.value = '';
+
+                                if (data.address) {
+                                    const addr = data.address;
+
+                                    // Remplir uniquement si les valeurs existent et sont valides
+                                    if (addr.road && addr.road.trim() !== '') {
+                                        line1Input.value = addr.road;
+                                    }
+                                    if (addr.suburb && addr.suburb.trim() !== '') {
+                                        line2Input.value = addr.suburb;
+                                    }
+                                    if (addr.city && addr.city.trim() !== '') {
+                                        cityInput.value = addr.city;
+                                    } else if (addr.town && addr.town.trim() !== '') {
+                                        cityInput.value = addr.town;
+                                    } else if (addr.village && addr.village.trim() !== '') {
+                                        cityInput.value = addr.village;
+                                    }
+                                    if (addr.postcode && addr.postcode.trim() !== '' && postalCodeInput) {
+                                        postalCodeInput.value = addr.postcode;
+                                    }
+                                }
+                            })
+                            .catch(err => console.error('Erreur géocodage inverse:', err));
+                    }
+                }
+
+                // Clic sur la carte pour définir la position
+                map.on('click', function(e) {
+                    updatePosition(e.latlng.lat, e.latlng.lng, true);
+                });
             }
         });
     </script>

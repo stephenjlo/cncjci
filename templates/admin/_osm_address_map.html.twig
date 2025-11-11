@@ -86,25 +86,33 @@
         const address = e.geocode;
 
         // Mettre à jour la position
-        updatePosition(latlng.lat, latlng.lng, true);
+        updatePosition(latlng.lat, latlng.lng, false);
 
-        // Remplir les champs d'adresse
-        if (address.properties) {
-            if (address.properties.address) {
-                const addr = address.properties.address;
+        // Vider et remplir les champs d'adresse depuis les résultats de recherche
+        line1Input.value = '';
+        line2Input.value = '';
+        cityInput.value = '';
+        if (postalCodeInput) postalCodeInput.value = '';
 
-                if (addr.road && !line1Input.value) {
-                    line1Input.value = addr.road;
-                }
-                if (addr.suburb && !line2Input.value) {
-                    line2Input.value = addr.suburb;
-                }
-                if ((addr.city || addr.town || addr.village) && !cityInput.value) {
-                    cityInput.value = addr.city || addr.town || addr.village;
-                }
-                if (addr.postcode && !postalCodeInput.value) {
-                    postalCodeInput.value = addr.postcode;
-                }
+        if (address.properties && address.properties.address) {
+            const addr = address.properties.address;
+
+            // Remplir uniquement si les valeurs existent et sont valides
+            if (addr.road && addr.road.trim() !== '') {
+                line1Input.value = addr.road;
+            }
+            if (addr.suburb && addr.suburb.trim() !== '') {
+                line2Input.value = addr.suburb;
+            }
+            if (addr.city && addr.city.trim() !== '') {
+                cityInput.value = addr.city;
+            } else if (addr.town && addr.town.trim() !== '') {
+                cityInput.value = addr.town;
+            } else if (addr.village && addr.village.trim() !== '') {
+                cityInput.value = addr.village;
+            }
+            if (addr.postcode && addr.postcode.trim() !== '' && postalCodeInput) {
+                postalCodeInput.value = addr.postcode;
             }
         }
 
@@ -132,24 +140,35 @@
             });
         }
 
-        // Géocodage inverse pour récupérer l'adresse
+        // Géocodage inverse pour récupérer l'adresse au clic/drag (TOUJOURS mettre à jour)
         if (reverseGeocode) {
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=fr`)
                 .then(response => response.json())
                 .then(data => {
+                    // Vider tous les champs d'abord
+                    line1Input.value = '';
+                    line2Input.value = '';
+                    cityInput.value = '';
+                    if (postalCodeInput) postalCodeInput.value = '';
+
                     if (data.address) {
                         const addr = data.address;
 
-                        if (addr.road && !line1Input.value) {
+                        // Remplir uniquement si les valeurs existent et sont valides
+                        if (addr.road && addr.road.trim() !== '') {
                             line1Input.value = addr.road;
                         }
-                        if (addr.suburb && !line2Input.value) {
+                        if (addr.suburb && addr.suburb.trim() !== '') {
                             line2Input.value = addr.suburb;
                         }
-                        if ((addr.city || addr.town || addr.village) && !cityInput.value) {
-                            cityInput.value = addr.city || addr.town || addr.village;
+                        if (addr.city && addr.city.trim() !== '') {
+                            cityInput.value = addr.city;
+                        } else if (addr.town && addr.town.trim() !== '') {
+                            cityInput.value = addr.town;
+                        } else if (addr.village && addr.village.trim() !== '') {
+                            cityInput.value = addr.village;
                         }
-                        if (addr.postcode && !postalCodeInput.value) {
+                        if (addr.postcode && addr.postcode.trim() !== '' && postalCodeInput) {
                             postalCodeInput.value = addr.postcode;
                         }
                     }

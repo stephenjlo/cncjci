@@ -234,29 +234,35 @@
                 let matchCount = 0;
 
                 lawyerItems.forEach(item => {
-                    const lawyerName = item.dataset.lawyerName;
-                    const lawyerCabinet = item.dataset.lawyerCabinet;
-                    const searchLower = searchTerm.toLowerCase();
+                    const lawyerName = item.dataset.lawyerName || '';
+                    const lawyerCabinet = item.dataset.lawyerCabinet || '';
+                    const searchLower = searchTerm.toLowerCase().trim();
 
                     // Vérifier si l'avocat correspond à la recherche
-                    const matches = lawyerName.includes(searchLower) || lawyerCabinet.includes(searchLower);
+                    const matches = searchTerm === '' ||
+                                    lawyerName.includes(searchLower) ||
+                                    lawyerCabinet.includes(searchLower);
 
                     if (matches) {
                         matchCount++;
-                        // Afficher seulement les 10 premiers résultats
+                        // Afficher seulement les 10 premiers résultats correspondants
                         if (visibleCount < maxDisplay) {
                             item.style.display = 'flex';
+                            item.classList.remove('d-none');
                             visibleCount++;
                         } else {
                             item.style.display = 'none';
+                            item.classList.add('d-none');
                         }
                     } else {
+                        // Masquer les éléments qui ne correspondent pas
                         item.style.display = 'none';
+                        item.classList.add('d-none');
                     }
                 });
 
                 // Afficher/masquer le message "aucun résultat"
-                if (matchCount === 0) {
+                if (matchCount === 0 && searchTerm !== '') {
                     noResults.style.display = 'block';
                 } else {
                     noResults.style.display = 'none';

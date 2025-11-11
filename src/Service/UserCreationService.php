@@ -8,9 +8,12 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class UserCreationService
 {
+    private const DEFAULT_PASSWORD = 'ChangeMe2024!';
+
     public function __construct(
         private EntityManagerInterface $em,
-        private UserPasswordHasherInterface $passwordHasher
+        private UserPasswordHasherInterface $passwordHasher,
+        private EmailService $emailService
     ) {}
 
     /**
@@ -50,9 +53,8 @@ class UserCreationService
         $user->setLawyer($lawyer);
         $user->setIsActive(true);
 
-        // Mot de passe par défaut : "ChangeMe2024!" (à forcer le changement)
-        $defaultPassword = 'ChangeMe2024!';
-        $hashedPassword = $this->passwordHasher->hashPassword($user, $defaultPassword);
+        // Mot de passe par défaut
+        $hashedPassword = $this->passwordHasher->hashPassword($user, self::DEFAULT_PASSWORD);
         $user->setPassword($hashedPassword);
 
         // Forcer le changement de mot de passe à la première connexion
@@ -66,11 +68,20 @@ class UserCreationService
         $this->em->persist($user);
         $this->em->flush();
 
+        // Envoyer l'email de bienvenue
+        $this->emailService->sendWelcomeEmail(
+            $email,
+            $lawyer->getFullName(),
+            'ROLE_LAWYER',
+            self::DEFAULT_PASSWORD,
+            $lawyer->getCabinet()?->getName()
+        );
+
         return $user;
     }
 
     /**
-     * Met à jour le rôle d'un User en RESPO_CABINET
+     * Met à jour le rôle d'un User en RESPO_CABINET et envoie un email de notification
      */
     public function promoteToRespoCabinet(User $user): void
     {
@@ -79,6 +90,15 @@ class UserCreationService
             $roles[] = 'ROLE_RESPO_CABINET';
             $user->setRoles($roles);
             $this->em->flush();
+
+            // Envoyer l'email de promotion
+            if ($user->getCabinet()) {
+                $this->emailService->sendPromotionEmail(
+                    $user->getEmail(),
+                    $user->getFullName(),
+                    $user->getCabinet()->getName()
+                );
+            }
         }
     }
 

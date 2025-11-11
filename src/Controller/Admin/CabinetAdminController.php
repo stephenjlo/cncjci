@@ -31,26 +31,11 @@ class CabinetAdminController extends AbstractController
     #[Route('', name: 'admin_cabinet_index')]
     public function index(Request $request): Response
     {
-        $page = $request->query->getInt('page', 1);
-        $search = $request->query->get('search', '');
-
-        $qb = $this->repository->createQueryBuilder('c');
-
-        if ($search) {
-            $qb->where('c.name LIKE :search')
-                ->setParameter('search', '%' . $search . '%');
-        }
-
-        $qb->orderBy('c.name', 'ASC')
-            ->setMaxResults(20)
-            ->setFirstResult(($page - 1) * 20);
-
-        $cabinets = $qb->getQuery()->getResult();
+        // Récupérer tous les cabinets (DataTable gérera la pagination côté client)
+        $cabinets = $this->repository->findBy([], ['name' => 'ASC']);
 
         return $this->render('admin/cabinet/index.html.twig', [
             'cabinets' => $cabinets,
-            'search' => $search,
-            'page' => $page,
         ]);
     }
 
@@ -58,6 +43,22 @@ class CabinetAdminController extends AbstractController
     public function new(Request $request): Response
     {
         $cabinet = new Cabinet();
+
+        // Initialiser avec au moins un email et un téléphone vide
+        $email = new \App\Entity\EmailAddress();
+        $email->setLabel('Principal');
+        $email->setEmail('');
+        $email->setIsPrimary(true);
+        $email->setPosition(0);
+        $cabinet->addEmail($email);
+
+        $phone = new \App\Entity\Phone();
+        $phone->setLabel('Standard');
+        $phone->setNumber('');
+        $phone->setIsPrimary(true);
+        $phone->setPosition(0);
+        $cabinet->addPhone($phone);
+
         $form = $this->createForm(CabinetType::class, $cabinet);
 
         $form->handleRequest($request);
@@ -133,6 +134,25 @@ class CabinetAdminController extends AbstractController
 
         $oldManagingPartner = $cabinet->getManagingPartner();
         $oldLogoUrl = $cabinet->getLogoUrl();
+
+        // Initialiser les collections si elles sont vides
+        if ($cabinet->getEmails()->isEmpty()) {
+            $email = new \App\Entity\EmailAddress();
+            $email->setLabel('Principal');
+            $email->setEmail('');
+            $email->setIsPrimary(true);
+            $email->setPosition(0);
+            $cabinet->addEmail($email);
+        }
+
+        if ($cabinet->getPhones()->isEmpty()) {
+            $phone = new \App\Entity\Phone();
+            $phone->setLabel('Standard');
+            $phone->setNumber('');
+            $phone->setIsPrimary(true);
+            $phone->setPosition(0);
+            $cabinet->addPhone($phone);
+        }
 
         $form = $this->createForm(CabinetType::class, $cabinet);
         $form->handleRequest($request);

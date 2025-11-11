@@ -19,6 +19,40 @@
             Nouvel Avocat
         </a>
     </div>
+    {% if lawyers|length > 0 %}
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h3 class="text-primary mb-0">{{ lawyers|length }}</h3>
+                        <small class="text-muted">Avocat(s) affiché(s)</small>
+                    </div>
+                </div>
+            </div>
+            {% if is_granted('ROLE_SUPER_ADMIN') %}
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-success mb-0">
+                                {{ lawyers|filter(l => l.cabinet is not null)|length }}
+                            </h3>
+                            <small class="text-muted">Rattaché(s) à un cabinet</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-warning mb-0">
+                                {{ lawyers|filter(l => l.cabinet is null)|length }}
+                            </h3>
+                            <small class="text-muted">Sans cabinet</small>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
 
     {# Information contextuelle pour RESPO_CABINET #}
     {% if is_granted('ROLE_RESPO_CABINET') and not is_granted('ROLE_SUPER_ADMIN') %}
@@ -149,6 +183,30 @@
                                             </a>
                                         {% endif %}
                                     </div>
+
+                                    {# Bouton création compte User si pas encore de compte #}
+                                    {% if lawyer.primaryEmail or lawyer.email %}
+                                        {% set hasUser = false %}
+                                        {% for user in app.user.cabinet ? app.user.cabinet.lawyers : [] %}
+                                            {# Note: Vérification approximative, le vrai check se fait côté serveur #}
+                                        {% endfor %}
+                                        <form method="post"
+                                              action="{{ path('admin_lawyer_create_user', {id: lawyer.id}) }}"
+                                              style="display: inline; margin-top: 5px;"
+                                              onsubmit="return confirm('Êtes-vous sûr de vouloir créer un compte utilisateur pour {{ lawyer.fullName }} ?\n\nUn email sera envoyé avec les identifiants de connexion.');">
+                                            <button type="submit"
+                                                    class="btn btn-outline-success btn-sm"
+                                                    title="Créer un compte utilisateur">
+                                                <i class="bi bi-person-plus"></i>
+                                                Créer compte
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <small class="text-muted d-block mt-2">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            Email requis
+                                        </small>
+                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}
@@ -178,40 +236,7 @@
     {% endif %}
 
     {# Statistiques rapides #}
-    {% if lawyers|length > 0 %}
-        <div class="row mt-4">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h3 class="text-primary mb-0">{{ lawyers|length }}</h3>
-                        <small class="text-muted">Avocat(s) affiché(s)</small>
-                    </div>
-                </div>
-            </div>
-            {% if is_granted('ROLE_SUPER_ADMIN') %}
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h3 class="text-success mb-0">
-                                {{ lawyers|filter(l => l.cabinet is not null)|length }}
-                            </h3>
-                            <small class="text-muted">Rattaché(s) à un cabinet</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h3 class="text-warning mb-0">
-                                {{ lawyers|filter(l => l.cabinet is null)|length }}
-                            </h3>
-                            <small class="text-muted">Sans cabinet</small>
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-        </div>
-    {% endif %}
+
 
 {% endblock %}
 
@@ -225,7 +250,7 @@
         $(document).ready(function() {
             $('#lawyers-table').DataTable({
                 language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'
                 },
                 pageLength: 25,
                 order: [[1, 'asc']], // Tri par nom par défaut

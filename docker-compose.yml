@@ -76,6 +76,16 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: mysql
 
+  # Mailhog pour tester l'envoi d'emails en local
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: symfony-mailhog
+    ports:
+      - "1025:1025"  # Port SMTP
+      - "8025:8025"  # Interface web
+    networks:
+      - symfony-network
+
 networks:
   symfony-network:
     driver: bridge
