@@ -1,3 +1,11 @@
+# Route par défaut - Redirection vers le back-office
+root:
+    path: /
+    controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController
+    defaults:
+        route: 'admin_dashboard'
+        permanent: false
+
 controllers:
     resource:
         path: ../src/Controller/

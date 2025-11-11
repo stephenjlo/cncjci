@@ -1,0 +1,439 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}{{ cabinet.id ? 'Modifier' : 'Nouveau' }} Cabinet{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {# Select2 CSS #}
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-building text-primary"></i>
+            {{ cabinet.id ? 'Modifier' : 'Nouveau' }} Cabinet
+        </h1>
+        <a href="{{ path('admin_cabinet_index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Retour à la liste
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
+
+            {# Informations générales #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-info-circle"></i>
+                    Informations Générales
+                </div>
+                <div class="card-body">
+                    {{ form_row(form.name) }}
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.slug) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.typeEntity) }}
+                        </div>
+                    </div>
+
+                    {{ form_row(form.website) }}
+
+                    {{ form_row(form.description) }}
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            {{ form_row(form.logoFile) }}
+                            {% if cabinet.logoUrl %}
+                                <div class="mt-2">
+                                    <img src="{{ cabinet.logoUrl }}" alt="Logo actuel" class="img-thumbnail" style="max-height: 100px;">
+                                    <div class="mt-2">
+                                        <small class="d-block text-muted">
+                                            <i class="bi bi-link-45deg"></i> URL:
+                                            <code>{{ cabinet.logoUrl }}</code>
+                                        </small>
+                                        <small class="d-block text-muted">
+                                            <i class="bi bi-folder"></i> Fichier:
+                                            <code>public{{ cabinet.logoUrl }}</code>
+                                        </small>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="mt-2">
+                                    <small class="d-block text-muted">
+                                        <i class="bi bi-info-circle"></i> Les fichiers uploadés seront enregistrés dans:
+                                        <code>public/uploads/cabinets/</code>
+                                    </small>
+                                    <small class="d-block text-muted">
+                                        <i class="bi bi-link-45deg"></i> L'URL générée sera au format:
+                                        <code>/uploads/cabinets/nom-fichier-xxxxx.ext</code>
+                                    </small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {# Responsable et avocats - seulement à la création #}
+                    {% if not cabinet.id %}
+                        {% if form.managingPartner is defined %}
+                            {{ form_row(form.managingPartner) }}
+                        {% endif %}
+                        {% if form.lawyers is defined %}
+                            {{ form_row(form.lawyers) }}
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Coordonnées #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-telephone"></i>
+                    Coordonnées
+                </div>
+                <div class="card-body">
+                    <h6 class="mb-3">
+                        <i class="bi bi-telephone-fill text-primary"></i>
+                        Téléphones
+                        <small class="text-muted">(Au moins un requis)</small>
+                    </h6>
+                    <div id="phones-collection" class="mb-3"
+                         data-prototype="
+                            <div class=&quot;row mb-2 phone-item align-items-center&quot;>
+                                <div class=&quot;col-md-4&quot;>
+                                    {{ form_widget(form.phones.vars.prototype.label)|e('html_attr') }}
+                                </div>
+                                <div class=&quot;col-md-6&quot;>
+                                    {{ form_widget(form.phones.vars.prototype.number)|e('html_attr') }}
+                                </div>
+                                <div class=&quot;col-md-2 text-end&quot;>
+                                    <button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-phone&quot; title=&quot;Supprimer&quot;>
+                                        <i class=&quot;bi bi-trash&quot;></i>
+                                    </button>
+                                </div>
+                                {{ form_widget(form.phones.vars.prototype.isPrimary)|e('html_attr') }}
+                                {{ form_widget(form.phones.vars.prototype.position)|e('html_attr') }}
+                            </div>">
+                        {% for phone in form.phones %}
+                            <div class="row mb-2 phone-item align-items-center">
+                                <div class="col-md-4">
+                                    {{ form_widget(phone.label) }}
+                                    {{ form_errors(phone.label) }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form_widget(phone.number) }}
+                                    {{ form_errors(phone.number) }}
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <button type="button" class="btn btn-sm btn-danger remove-phone" title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                {{ form_widget(phone.isPrimary) }}
+                                {{ form_widget(phone.position) }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-phone">
+                        <i class="bi bi-plus-circle"></i>
+                        Ajouter un téléphone
+                    </button>
+
+                    <hr class="my-4">
+
+                    <h6 class="mb-3">
+                        <i class="bi bi-envelope-fill text-primary"></i>
+                        Emails
+                        <small class="text-muted">(Au moins un requis)</small>
+                    </h6>
+                    <div id="emails-collection" class="mb-3"
+                         data-prototype="
+                            <div class=&quot;row mb-2 email-item align-items-center&quot;>
+                                <div class=&quot;col-md-4&quot;>
+                                    {{ form_widget(form.emails.vars.prototype.label)|e('html_attr') }}
+                                </div>
+                                <div class=&quot;col-md-6&quot;>
+                                    {{ form_widget(form.emails.vars.prototype.email)|e('html_attr') }}
+                                </div>
+                                <div class=&quot;col-md-2 text-end&quot;>
+                                    <button type=&quot;button&quot; class=&quot;btn btn-sm btn-danger remove-email&quot; title=&quot;Supprimer&quot;>
+                                        <i class=&quot;bi bi-trash&quot;></i>
+                                    </button>
+                                </div>
+                                {{ form_widget(form.emails.vars.prototype.isPrimary)|e('html_attr') }}
+                                {{ form_widget(form.emails.vars.prototype.position)|e('html_attr') }}
+                            </div>">
+                        {% for email in form.emails %}
+                            <div class="row mb-2 email-item align-items-center">
+                                <div class="col-md-4">
+                                    {{ form_widget(email.label) }}
+                                    {{ form_errors(email.label) }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form_widget(email.email) }}
+                                    {{ form_errors(email.email) }}
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <button type="button" class="btn btn-sm btn-danger remove-email" title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                {{ form_widget(email.isPrimary) }}
+                                {{ form_widget(email.position) }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-email">
+                        <i class="bi bi-plus-circle"></i>
+                        Ajouter un email
+                    </button>
+                </div>
+            </div>
+
+            {# Adresse et localisation #}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="bi bi-geo-alt"></i>
+                    Adresse et Localisation
+                </div>
+                <div class="card-body">
+                    {{ form_row(form.address) }}
+
+                    {% include 'admin/_osm_address_map.html.twig' with {'map_id': 'cabinet-address-map'} %}
+                </div>
+            </div>
+
+            {# Boutons d'action #}
+            <div class="d-flex gap-2 mb-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i>
+                    {{ cabinet.id ? 'Enregistrer les modifications' : 'Créer le cabinet' }}
+                </button>
+                <a href="{{ path('admin_cabinet_index') }}" class="btn btn-secondary btn-lg">
+                    <i class="bi bi-x-circle"></i>
+                    Annuler
+                </a>
+            </div>
+
+            {{ form_end(form) }}
+        </div>
+
+        {# Colonne latérale #}
+        <div class="col-lg-4">
+            {% if cabinet.id %}
+                {# Informations du cabinet #}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-info-circle"></i>
+                        Informations
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">ID:</dt>
+                            <dd class="col-sm-8">{{ cabinet.id }}</dd>
+
+                            <dt class="col-sm-4">Slug:</dt>
+                            <dd class="col-sm-8">
+                                <code>{{ cabinet.slug }}</code>
+                            </dd>
+
+                            <dt class="col-sm-4">Avocats:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-primary">{{ cabinet.lawyers|length }}</span>
+                            </dd>
+
+                            <dt class="col-sm-4">Statut:</dt>
+                            <dd class="col-sm-8">
+                                {% if cabinet.isActive %}
+                                    <span class="badge bg-success">Actif</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactif</span>
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                {# Prévisualisation #}
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-eye"></i>
+                        Prévisualisation
+                    </div>
+                    <div class="card-body text-center">
+                        {% if cabinet.logoUrl %}
+                            <img src="{{ cabinet.logoUrl }}"
+                                 alt="{{ cabinet.name }}"
+                                 class="img-fluid rounded mb-3"
+                                 style="max-height: 150px;">
+                        {% else %}
+                            <div class="bg-light rounded mx-auto mb-3 d-flex align-items-center justify-content-center"
+                                 style="width: 150px; height: 150px;">
+                                <i class="bi bi-building text-muted" style="font-size: 4rem;"></i>
+                            </div>
+                        {% endif %}
+
+                        <h5 class="mb-1">{{ cabinet.name }}</h5>
+
+                        {% if cabinet.typeEntity %}
+                            <p class="text-muted mb-2">
+                                <span class="badge bg-info">{{ cabinet.typeEntity.name }}</span>
+                            </p>
+                        {% endif %}
+
+                        {% if cabinet.managingPartner %}
+                            <p class="text-muted small mb-0">
+                                <i class="bi bi-person-badge"></i>
+                                {{ cabinet.managingPartner.fullName }}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                {# Aide pour nouveau cabinet #}
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-lightbulb text-warning"></i>
+                            Conseils
+                        </h6>
+                        <ul class="small mb-0">
+                            <li>Le slug sera généré automatiquement à partir du nom si vous le laissez vide</li>
+                            <li>Vous pourrez désigner le responsable après avoir créé le cabinet et ajouté des avocats</li>
+                            <li>Utilisez la carte pour définir précisément la localisation</li>
+                            <li>Ajoutez au moins un téléphone et un email de contact</li>
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {# Select2 JS #}
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ═══════════════════════════════════════════════════
+            // SELECT2 POUR LES AVOCATS
+            // ═══════════════════════════════════════════════════
+            $('.select2-lawyers').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Rechercher et sélectionner des avocats...',
+                allowClear: true,
+                language: {
+                    noResults: function() {
+                        return "Aucun avocat trouvé";
+                    },
+                    searching: function() {
+                        return "Recherche en cours...";
+                    }
+                }
+            });
+
+            // SELECT2 pour le champ responsable (managingPartner)
+            $('#cabinet_managingPartner').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Rechercher un responsable...',
+                allowClear: true,
+                language: {
+                    noResults: function() {
+                        return "Aucun avocat trouvé";
+                    },
+                    searching: function() {
+                        return "Recherche en cours...";
+                    }
+                }
+            });
+            // ═══════════════════════════════════════════════════
+            // GESTION DES COLLECTIONS (Phones & Emails)
+            // ═══════════════════════════════════════════════════
+
+            /**
+             * Met à jour les positions et isPrimary des éléments d'une collection
+             */
+            function updateCollectionPositions(collectionId) {
+                const collection = document.getElementById(collectionId);
+                if (!collection) return;
+
+                const items = collection.querySelectorAll('.phone-item, .email-item');
+                items.forEach((item, index) => {
+                    // Mettre à jour position
+                    const positionInput = item.querySelector('input[id$="_position"]');
+                    if (positionInput) {
+                        positionInput.value = index;
+                    }
+
+                    // Mettre à jour isPrimary (le premier est toujours primary)
+                    // Pour les checkboxes, on utilise .checked au lieu de .value
+                    const isPrimaryInput = item.querySelector('input[id$="_isPrimary"]');
+                    if (isPrimaryInput) {
+                        if (isPrimaryInput.type === 'checkbox') {
+                            isPrimaryInput.checked = (index === 0);
+                        } else {
+                            isPrimaryInput.value = index === 0 ? '1' : '0';
+                        }
+                    }
+                });
+            }
+
+            function initCollection(collectionId, addButtonId, itemClass) {
+                const collection = document.getElementById(collectionId);
+                const addButton = document.getElementById(addButtonId);
+
+                if (!collection || !addButton) return;
+
+                // Initialiser les positions au chargement
+                updateCollectionPositions(collectionId);
+
+                // Ajout d'un élément
+                addButton.addEventListener('click', function() {
+                    const prototype = collection.dataset.prototype;
+                    const index = collection.children.length;
+                    const newForm = prototype.replace(/__name__/g, index);
+
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = newForm;
+                    collection.appendChild(wrapper.firstElementChild);
+
+                    // Mettre à jour les positions après ajout
+                    updateCollectionPositions(collectionId);
+                });
+
+                // Suppression d'un élément
+                collection.addEventListener('click', function(e) {
+                    const removeBtn = e.target.closest('.remove-phone, .remove-email');
+                    if (removeBtn) {
+                        const item = e.target.closest('.' + itemClass);
+                        const itemCount = collection.querySelectorAll('.' + itemClass).length;
+
+                        if (itemCount <= 1) {
+                            alert('Vous devez conserver au moins un élément');
+                            return;
+                        }
+
+                        if (item && confirm('Supprimer cet élément ?')) {
+                            item.remove();
+                            // Mettre à jour les positions après suppression
+                            updateCollectionPositions(collectionId);
+                        }
+                    }
+                });
+            }
+
+            initCollection('phones-collection', 'add-phone', 'phone-item');
+            initCollection('emails-collection', 'add-email', 'email-item');
+        });
+    </script>
+{% endblock %}

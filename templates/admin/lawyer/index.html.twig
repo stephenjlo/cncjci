@@ -1,0 +1,269 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Gestion des Avocats{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {# DataTables CSS #}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-people text-primary"></i>
+            Gestion des Avocats
+        </h1>
+        <a href="{{ path('admin_lawyer_new') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i>
+            Nouvel Avocat
+        </a>
+    </div>
+    {% if lawyers|length > 0 %}
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h3 class="text-primary mb-0">{{ lawyers|length }}</h3>
+                        <small class="text-muted">Avocat(s) affiché(s)</small>
+                    </div>
+                </div>
+            </div>
+            {% if is_granted('ROLE_SUPER_ADMIN') %}
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-success mb-0">
+                                {{ lawyers|filter(l => l.cabinet is not null)|length }}
+                            </h3>
+                            <small class="text-muted">Rattaché(s) à un cabinet</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3 class="text-warning mb-0">
+                                {{ lawyers|filter(l => l.cabinet is null)|length }}
+                            </h3>
+                            <small class="text-muted">Sans cabinet</small>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {# Information contextuelle pour RESPO_CABINET #}
+    {% if is_granted('ROLE_RESPO_CABINET') and not is_granted('ROLE_SUPER_ADMIN') %}
+        <div class="alert alert-info mb-4">
+            <i class="bi bi-info-circle"></i>
+            <strong>Cabinet : {{ app.user.cabinet.name }}</strong>
+            <br>
+            <small>Vous ne pouvez gérer que les avocats de votre cabinet.</small>
+        </div>
+    {% endif %}
+
+    {# Liste des avocats #}
+    {% if lawyers|length > 0 %}
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-list-ul"></i>
+                Liste des avocats
+            </div>
+            <div class="card-body">
+                <table id="lawyers-table" class="table table-hover table-striped w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">Photo</th>
+                            <th>Nom complet</th>
+                            <th>Cabinet</th>
+                            <th>Spécialités</th>
+                            <th>Contact</th>
+                            <th>Barreau</th>
+                            <th style="width: 150px;" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lawyer in lawyers %}
+                            <tr>
+                                <td>
+                                    {% if lawyer.photoUrl %}
+                                        <img src="{{ lawyer.photoUrl }}"
+                                             alt="{{ lawyer.fullName }}"
+                                             class="rounded-circle"
+                                             style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center"
+                                             style="width: 40px; height: 40px;">
+                                            <i class="bi bi-person text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="fw-bold">{{ lawyer.fullName }}</div>
+                                    {% if lawyer.barNumber %}
+                                        <small class="text-muted">
+                                            <i class="bi bi-card-text"></i>
+                                            {{ lawyer.barNumber }}
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if lawyer.cabinet %}
+                                        <i class="bi bi-building"></i>
+                                        {{ lawyer.cabinet.name }}
+                                        {% if lawyer.cabinet.managingPartner and lawyer.cabinet.managingPartner.id == lawyer.id %}
+                                            <br>
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-star"></i>
+                                                Responsable
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if lawyer.specialties|length > 0 %}
+                                        {% for specialty in lawyer.specialties|slice(0, 2) %}
+                                            <span class="badge bg-secondary me-1">
+                                                {{ specialty.name }}
+                                            </span>
+                                        {% endfor %}
+                                        {% if lawyer.specialties|length > 2 %}
+                                            <span class="badge bg-light text-dark">
+                                                +{{ lawyer.specialties|length - 2 }}
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if lawyer.primaryEmail %}
+                                        <div>
+                                            <i class="bi bi-envelope"></i>
+                                            <small>{{ lawyer.primaryEmail.email }}</small>
+                                        </div>
+                                    {% elseif lawyer.email %}
+                                        <div>
+                                            <i class="bi bi-envelope"></i>
+                                            <small>{{ lawyer.email }}</small>
+                                        </div>
+                                    {% endif %}
+                                    {% if lawyer.primaryPhone %}
+                                        <div>
+                                            <i class="bi bi-telephone"></i>
+                                            <small>{{ lawyer.primaryPhone.number }}</small>
+                                        </div>
+                                    {% elseif lawyer.phone %}
+                                        <div>
+                                            <i class="bi bi-telephone"></i>
+                                            <small>{{ lawyer.phone }}</small>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if lawyer.barNumber %}
+                                        <span class="badge bg-info">
+                                            {{ lawyer.barNumber }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        {% if is_granted('LAWYER_EDIT', lawyer) %}
+                                            <a href="{{ path('admin_lawyer_edit', {id: lawyer.id}) }}"
+                                               class="btn btn-outline-primary"
+                                               title="Modifier">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+
+                                    {# Bouton création compte User si pas encore de compte #}
+                                    {% if lawyer.primaryEmail or lawyer.email %}
+                                        {% set hasUser = false %}
+                                        {% for user in app.user.cabinet ? app.user.cabinet.lawyers : [] %}
+                                            {# Note: Vérification approximative, le vrai check se fait côté serveur #}
+                                        {% endfor %}
+                                        <form method="post"
+                                              action="{{ path('admin_lawyer_create_user', {id: lawyer.id}) }}"
+                                              style="display: inline; margin-top: 5px;"
+                                              onsubmit="return confirm('Êtes-vous sûr de vouloir créer un compte utilisateur pour {{ lawyer.fullName }} ?\n\nUn email sera envoyé avec les identifiants de connexion.');">
+                                            <button type="submit"
+                                                    class="btn btn-outline-success btn-sm"
+                                                    title="Créer un compte utilisateur">
+                                                <i class="bi bi-person-plus"></i>
+                                                Créer compte
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <small class="text-muted d-block mt-2">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            Email requis
+                                        </small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h4 class="mt-3">Aucun avocat trouvé</h4>
+                <p class="text-muted">
+                    {% if is_granted('ROLE_RESPO_CABINET') and not is_granted('ROLE_SUPER_ADMIN') %}
+                        Commencez par ajouter des avocats à votre cabinet
+                    {% else %}
+                        Commencez par créer votre premier avocat
+                    {% endif %}
+                </p>
+                <a href="{{ path('admin_lawyer_new') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i>
+                    Créer un avocat
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+    {# Statistiques rapides #}
+
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {# DataTables JS #}
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $('#lawyers-table').DataTable({
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'
+                },
+                pageLength: 25,
+                order: [[1, 'asc']], // Tri par nom par défaut
+                columnDefs: [
+                    { orderable: false, targets: [0, 6] }, // Désactiver le tri sur Photo et Actions
+                    { searchable: false, targets: [0, 6] }  // Désactiver la recherche sur Photo et Actions
+                ],
+                dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                responsive: true,
+                stateSave: true // Sauvegarde l'état de la table (pagination, recherche, etc.)
+            });
+        });
+    </script>
+{% endblock %}

@@ -4,6 +4,11 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    uploads_directory: '%kernel.project_dir%/public/uploads'
+    default_cabinet_logo: 'https://cncj-ci.ci/wp-content/uploads/2024/11/LOGO-SITE-INTERNET-copie.png'
+    # URL de base de l'application (utilisée pour générer des URLs absolues pour l'API)
+    # En production, définir cette variable d'environnement APP_BASE_URL
+    app_base_url: '%env(default::APP_BASE_URL)%'
 
 services:
     # default configuration for services in *this* file
@@ -22,3 +27,15 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    # Configuration du service d'upload de fichiers
+    App\Service\FileUploadService:
+        arguments:
+            $uploadsDirectory: '%uploads_directory%'
+            $baseUrl: '%app_base_url%'
+
+    # Configuration du service de gestion des images
+    App\Service\ImageManager:
+        arguments:
+            $uploadsDirectory: '%uploads_directory%'
+            $baseUrl: '%app_base_url%'

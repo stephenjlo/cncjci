@@ -1,0 +1,226 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Gestion des Cabinets{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {# DataTables CSS #}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-building text-primary"></i>
+            Gestion des Cabinets
+        </h1>
+        <a href="{{ path('admin_cabinet_new') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i>
+            Nouveau Cabinet
+        </a>
+    </div>
+
+    {# Liste des cabinets #}
+    {% if cabinets|length > 0 %}
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-list-ul"></i>
+                Liste des cabinets
+            </div>
+            <div class="card-body">
+                <table id="cabinets-table" class="table table-hover table-striped w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">Logo</th>
+                            <th>Nom</th>
+                            <th>Type</th>
+                            <th>Responsable</th>
+                            <th>Contact</th>
+                            <th>Ville</th>
+                            <th style="width: 100px;" class="text-center">Avocats</th>
+                            <th style="width: 100px;" class="text-center">Statut</th>
+                            <th style="width: 250px;" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cabinet in cabinets %}
+                            <tr>
+                                <td>
+                                    {% if cabinet.logoUrl %}
+                                        <img src="{{ cabinet.logoUrl }}"
+                                             alt="{{ cabinet.name }}"
+                                             class="rounded"
+                                             style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light rounded d-flex align-items-center justify-content-center"
+                                             style="width: 40px; height: 40px;">
+                                            <i class="bi bi-building text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="fw-bold">{{ cabinet.name }}</div>
+                                    {% if cabinet.website %}
+                                        <small class="text-muted">
+                                            <i class="bi bi-globe"></i>
+                                            <a href="{{ cabinet.website }}" target="_blank" class="text-decoration-none">
+                                                Site web
+                                            </a>
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cabinet.typeEntity %}
+                                        <span class="badge bg-info">
+                                            {{ cabinet.typeEntity.name }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            {{ cabinet.type }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cabinet.managingPartner %}
+                                        <i class="bi bi-person-badge text-primary"></i>
+                                        {{ cabinet.managingPartner.fullName }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cabinet.primaryEmail %}
+                                        <div>
+                                            <i class="bi bi-envelope"></i>
+                                            <small>{{ cabinet.primaryEmail.email }}</small>
+                                        </div>
+                                    {% elseif cabinet.email %}
+                                        <div>
+                                            <i class="bi bi-envelope"></i>
+                                            <small>{{ cabinet.email }}</small>
+                                        </div>
+                                    {% endif %}
+                                    {% if cabinet.primaryPhone %}
+                                        <div>
+                                            <i class="bi bi-telephone"></i>
+                                            <small>{{ cabinet.primaryPhone.number }}</small>
+                                        </div>
+                                    {% elseif cabinet.phone %}
+                                        <div>
+                                            <i class="bi bi-telephone"></i>
+                                            <small>{{ cabinet.phone }}</small>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cabinet.address %}
+                                        <i class="bi bi-geo-alt"></i>
+                                        {{ cabinet.address.city ?? cabinet.city ?? '-' }}
+                                    {% elseif cabinet.city %}
+                                        <i class="bi bi-geo-alt"></i>
+                                        {{ cabinet.city }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary rounded-pill">
+                                        {{ cabinet.lawyers|length }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if cabinet.isActive %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i>
+                                            Actif
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i>
+                                            Inactif
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        {# Modifier les informations du cabinet #}
+                                        <a href="{{ path('admin_cabinet_edit', {id: cabinet.id}) }}"
+                                           class="btn btn-outline-primary"
+                                           title="Modifier les informations">
+                                            <i class="bi bi-pencil"></i>
+                                            Modifier
+                                        </a>
+
+                                        {# Gérer les avocats du cabinet #}
+                                        <a href="{{ path('admin_cabinet_lawyers', {id: cabinet.id}) }}"
+                                           class="btn btn-outline-info"
+                                           title="Gérer les avocats du cabinet">
+                                            <i class="bi bi-people"></i>
+                                            Avocats
+                                        </a>
+
+                                        {# Activer/Désactiver #}
+                                        <form method="post"
+                                              action="{{ path('admin_cabinet_toggle', {id: cabinet.id}) }}"
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Confirmer le changement de statut ?');">
+                                            <button type="submit"
+                                                    class="btn btn-outline-{{ cabinet.isActive ? 'warning' : 'success' }}"
+                                                    title="{{ cabinet.isActive ? 'Désactiver' : 'Activer' }}">
+                                                <i class="bi bi-{{ cabinet.isActive ? 'pause-circle' : 'play-circle' }}"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h4 class="mt-3">Aucun cabinet trouvé</h4>
+                <p class="text-muted">
+                    Commencez par créer votre premier cabinet
+                </p>
+                <a href="{{ path('admin_cabinet_new') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i>
+                    Créer un cabinet
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {# DataTables JS #}
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $('#cabinets-table').DataTable({
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'
+                },
+                pageLength: 25,
+                order: [[1, 'asc']], // Tri par nom par défaut
+                columnDefs: [
+                    { orderable: false, targets: [0, 8] }, // Désactiver le tri sur Logo et Actions
+                    { searchable: false, targets: [0, 8] }  // Désactiver la recherche sur Logo et Actions
+                ],
+                dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                responsive: true,
+                autoWidth: false
+            });
+        });
+    </script>
+{% endblock %}

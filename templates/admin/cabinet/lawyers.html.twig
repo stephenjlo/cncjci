@@ -1,0 +1,289 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Avocats du Cabinet {{ cabinet.name }}{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-people text-primary"></i>
+            Avocats du Cabinet {{ cabinet.name }}
+        </h1>
+        <a href="{{ path('admin_cabinet_index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Retour à la liste
+        </a>
+    </div>
+
+    {# Informations du cabinet #}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-info-circle"></i>
+            Informations du Cabinet
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    {% if cabinet.logoUrl %}
+                        <img src="{{ cabinet.logoUrl }}" alt="{{ cabinet.name }}" class="img-fluid rounded" style="max-height: 100px;">
+                    {% else %}
+                        <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                            <i class="bi bi-building text-muted" style="font-size: 3rem;"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-9">
+                    <h5>{{ cabinet.name }}</h5>
+                    {% if cabinet.typeEntity %}
+                        <p class="text-muted mb-2">
+                            <span class="badge bg-info">{{ cabinet.typeEntity.name }}</span>
+                        </p>
+                    {% endif %}
+                    <p class="mb-1">
+                        <i class="bi bi-people-fill"></i>
+                        <strong>Avocats rattachés:</strong> {{ cabinetLawyers|length }}
+                    </p>
+                    {% if cabinet.managingPartner %}
+                        <p class="mb-1">
+                            <i class="bi bi-person-badge-fill text-primary"></i>
+                            <strong>Responsable actuel:</strong> {{ cabinet.managingPartner.fullName }}
+                        </p>
+                    {% else %}
+                        <p class="mb-1 text-muted">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <em>Aucun responsable désigné</em>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {# Liste des avocats rattachés #}
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-check-circle"></i>
+                    Avocats Rattachés ({{ cabinetLawyers|length }})
+                </div>
+                <div class="card-body">
+                    {% if cabinetLawyers|length > 0 %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Barreau</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lawyer in cabinetLawyers %}
+                                        <tr>
+                                            <td>
+                                                {% if lawyer.photoUrl %}
+                                                    <img src="{{ lawyer.photoUrl }}" alt="{{ lawyer.fullName }}" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                                                {% endif %}
+                                                {{ lawyer.fullName }}
+                                                {% if cabinet.managingPartner == lawyer %}
+                                                    <span class="badge bg-primary ms-2">
+                                                        <i class="bi bi-star-fill"></i> Responsable
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if lawyer.barNumber %}
+                                                    <code>{{ lawyer.barNumber }}</code>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    {% if cabinet.managingPartner != lawyer %}
+                                                        <form method="post" style="display: inline;">
+                                                            <input type="hidden" name="action" value="designate">
+                                                            <input type="hidden" name="lawyer_id" value="{{ lawyer.id }}">
+                                                            <button type="submit" class="btn btn-outline-primary" title="Désigner comme responsable" onclick="return confirm('Désigner {{ lawyer.fullName }} comme responsable du cabinet ?')">
+                                                                <i class="bi bi-star"></i>
+                                                            </button>
+                                                        </form>
+                                                        <form method="post" style="display: inline;">
+                                                            <input type="hidden" name="action" value="detach">
+                                                            <input type="hidden" name="lawyer_id" value="{{ lawyer.id }}">
+                                                            <button type="submit" class="btn btn-outline-danger" title="Détacher du cabinet" onclick="return confirm('Détacher {{ lawyer.fullName }} de ce cabinet ?')">
+                                                                <i class="bi bi-x-circle"></i>
+                                                            </button>
+                                                        </form>
+                                                    {% else %}
+                                                        <span class="badge bg-success">Responsable actuel</span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle"></i>
+                            Aucun avocat n'est rattaché à ce cabinet pour le moment.
+                            <br>
+                            <small class="text-muted">Utilisez la liste de droite pour rattacher des avocats.</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Liste des avocats disponibles pour rattachement #}
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-plus-circle"></i>
+                        Avocats Disponibles
+                    </span>
+                    <span class="badge bg-secondary" id="available-count">0</span>
+                </div>
+                <div class="card-body">
+                    {% set availableLawyers = [] %}
+                    {% for lawyer in allLawyers %}
+                        {% if lawyer.cabinet != cabinet %}
+                            {% set availableLawyers = availableLawyers|merge([lawyer]) %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if availableLawyers|length > 0 %}
+                        {# Barre de recherche #}
+                        <div class="mb-3">
+                            <input type="text"
+                                   id="search-available-lawyers"
+                                   class="form-control form-control-sm"
+                                   placeholder="Rechercher un avocat..."
+                                   autocomplete="off">
+                            <small class="form-text text-muted">
+                                <i class="bi bi-info-circle"></i>
+                                Affichage limité à 10 résultats. Utilisez la recherche pour filtrer.
+                            </small>
+                        </div>
+
+                        <div class="list-group" id="available-lawyers-list">
+                            {% for lawyer in availableLawyers %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center lawyer-item"
+                                     data-lawyer-name="{{ lawyer.fullName|lower }}"
+                                     data-lawyer-cabinet="{{ lawyer.cabinet ? lawyer.cabinet.name|lower : 'sans cabinet' }}">
+                                    <div>
+                                        {% if lawyer.photoUrl %}
+                                            <img src="{{ lawyer.photoUrl }}" alt="{{ lawyer.fullName }}" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                                        {% endif %}
+                                        <strong>{{ lawyer.fullName }}</strong>
+                                        {% if lawyer.cabinet %}
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="bi bi-building"></i> {{ lawyer.cabinet.name }}
+                                            </small>
+                                        {% else %}
+                                            <br>
+                                            <small class="text-success">
+                                                <i class="bi bi-check-circle"></i> Sans cabinet
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                    <form method="post" style="display: inline;">
+                                        <input type="hidden" name="action" value="attach">
+                                        <input type="hidden" name="lawyer_id" value="{{ lawyer.id }}">
+                                        <button type="submit" class="btn btn-sm btn-primary" title="Rattacher au cabinet">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div id="no-results" class="alert alert-info mt-3" style="display: none;">
+                            <i class="bi bi-search"></i>
+                            Aucun avocat ne correspond à votre recherche.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Tous les avocats sont déjà rattachés à ce cabinet ou il n'y a plus d'avocats disponibles.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('search-available-lawyers');
+            const lawyerItems = document.querySelectorAll('.lawyer-item');
+            const noResults = document.getElementById('no-results');
+            const availableCount = document.getElementById('available-count');
+            const maxDisplay = 10;
+
+            // Fonction pour afficher les avocats
+            function displayLawyers(searchTerm = '') {
+                let visibleCount = 0;
+                let matchCount = 0;
+
+                lawyerItems.forEach(item => {
+                    const lawyerName = item.dataset.lawyerName || '';
+                    const lawyerCabinet = item.dataset.lawyerCabinet || '';
+                    const searchLower = searchTerm.toLowerCase().trim();
+
+                    // Vérifier si l'avocat correspond à la recherche
+                    const matches = searchTerm === '' ||
+                                    lawyerName.includes(searchLower) ||
+                                    lawyerCabinet.includes(searchLower);
+
+                    if (matches) {
+                        matchCount++;
+                        // Afficher seulement les 10 premiers résultats correspondants
+                        if (visibleCount < maxDisplay) {
+                            item.style.display = 'flex';
+                            item.classList.remove('d-none');
+                            visibleCount++;
+                        } else {
+                            item.style.display = 'none';
+                            item.classList.add('d-none');
+                        }
+                    } else {
+                        // Masquer les éléments qui ne correspondent pas
+                        item.style.display = 'none';
+                        item.classList.add('d-none');
+                    }
+                });
+
+                // Afficher/masquer le message "aucun résultat"
+                if (matchCount === 0 && searchTerm !== '') {
+                    noResults.style.display = 'block';
+                } else {
+                    noResults.style.display = 'none';
+                }
+
+                // Mettre à jour le compteur
+                availableCount.textContent = matchCount;
+            }
+
+            // Recherche en temps réel
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    displayLawyers(this.value);
+                });
+
+                // Affichage initial (10 premiers)
+                displayLawyers();
+            } else {
+                // Si pas de barre de recherche, afficher quand même le compteur
+                displayLawyers();
+            }
+        });
+    </script>
+{% endblock %}

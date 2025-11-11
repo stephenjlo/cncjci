@@ -1,0 +1,200 @@
+{# Template réutilisable pour la carte OpenStreetMap avec recherche #}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.css" />
+
+<style>
+    .address-map-container {
+        height: 400px;
+        margin-top: 1rem;
+        border-radius: 0.375rem;
+        border: 1px solid #dee2e6;
+        position: relative;
+    }
+    .leaflet-control-geocoder {
+        background-color: white;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+    }
+    .leaflet-control-geocoder-form input {
+        padding: 5px 10px;
+        width: 300px;
+        font-size: 14px;
+    }
+</style>
+
+<div class="address-map-container" id="{{ map_id|default('address-map') }}"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.js"></script>
+
+<script>
+(function() {
+    const mapElement = document.getElementById('{{ map_id|default('address-map') }}');
+    if (!mapElement) return;
+
+    const latInput = document.querySelector('input[id$="_lat"]');
+    const lngInput = document.querySelector('input[id$="_lng"]');
+    const line1Input = document.querySelector('input[id$="_line1"]');
+    const line2Input = document.querySelector('input[id$="_line2"]');
+    const cityInput = document.querySelector('input[id$="_city"]');
+    const postalCodeInput = document.querySelector('input[id$="_postalCode"]');
+
+    // Position initiale (Abidjan par défaut ou coordonnées existantes)
+    const initialLat = latInput && latInput.value ? parseFloat(latInput.value) : 5.345317;
+    const initialLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : -4.024429;
+    const initialZoom = (latInput && latInput.value) ? 15 : 12;
+
+    // Initialiser la carte
+    const map = L.map(mapElement).setView([initialLat, initialLng], initialZoom);
+
+    // Couche OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    let marker = null;
+
+    // Ajouter un marqueur si des coordonnées existent
+    if (latInput.value && lngInput.value) {
+        marker = L.marker([initialLat, initialLng], {
+            draggable: true,
+            title: 'Faites glisser pour ajuster la position'
+        }).addTo(map);
+
+        // Drag du marqueur
+        marker.on('dragend', function(e) {
+            const position = e.target.getLatLng();
+            updatePosition(position.lat, position.lng, true);
+        });
+    }
+
+    // Plugin de recherche Geocoder
+    const geocoder = L.Control.Geocoder.nominatim({
+        geocodingQueryParams: {
+            countrycodes: 'ci', // Limiter à la Côte d'Ivoire
+            'accept-language': 'fr'
+        }
+    });
+
+    const geocoderControl = L.Control.geocoder({
+        geocoder: geocoder,
+        defaultMarkGeocode: false,
+        placeholder: 'Rechercher une adresse à Abidjan...',
+        errorMessage: 'Aucun résultat trouvé'
+    }).on('markgeocode', function(e) {
+        const latlng = e.geocode.center;
+        const address = e.geocode;
+
+        // Mettre à jour la position
+        updatePosition(latlng.lat, latlng.lng, false);
+
+        // Vider et remplir les champs d'adresse depuis les résultats de recherche
+        line1Input.value = '';
+        line2Input.value = '';
+        cityInput.value = '';
+        if (postalCodeInput) postalCodeInput.value = '';
+
+        if (address.properties && address.properties.address) {
+            const addr = address.properties.address;
+
+            // Remplir uniquement si les valeurs existent et sont valides
+            if (addr.road && addr.road.trim() !== '') {
+                line1Input.value = addr.road;
+            }
+            if (addr.suburb && addr.suburb.trim() !== '') {
+                line2Input.value = addr.suburb;
+            }
+            if (addr.city && addr.city.trim() !== '') {
+                cityInput.value = addr.city;
+            } else if (addr.town && addr.town.trim() !== '') {
+                cityInput.value = addr.town;
+            } else if (addr.village && addr.village.trim() !== '') {
+                cityInput.value = addr.village;
+            }
+            if (addr.postcode && addr.postcode.trim() !== '' && postalCodeInput) {
+                postalCodeInput.value = addr.postcode;
+            }
+        }
+
+        // Centrer la carte
+        map.setView(latlng, 16);
+    }).addTo(map);
+
+    // Fonction pour mettre à jour la position
+    function updatePosition(lat, lng, reverseGeocode = false) {
+        latInput.value = lat.toFixed(6);
+        lngInput.value = lng.toFixed(6);
+
+        // Mettre à jour ou créer le marqueur
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.marker([lat, lng], {
+                draggable: true,
+                title: 'Faites glisser pour ajuster la position'
+            }).addTo(map);
+
+            marker.on('dragend', function(e) {
+                const position = e.target.getLatLng();
+                updatePosition(position.lat, position.lng, true);
+            });
+        }
+
+        // Géocodage inverse pour récupérer l'adresse au clic/drag (TOUJOURS mettre à jour)
+        if (reverseGeocode) {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=fr`)
+                .then(response => response.json())
+                .then(data => {
+                    // Vider tous les champs d'abord
+                    line1Input.value = '';
+                    line2Input.value = '';
+                    cityInput.value = '';
+                    if (postalCodeInput) postalCodeInput.value = '';
+
+                    if (data.address) {
+                        const addr = data.address;
+
+                        // Remplir uniquement si les valeurs existent et sont valides
+                        if (addr.road && addr.road.trim() !== '') {
+                            line1Input.value = addr.road;
+                        }
+                        if (addr.suburb && addr.suburb.trim() !== '') {
+                            line2Input.value = addr.suburb;
+                        }
+                        if (addr.city && addr.city.trim() !== '') {
+                            cityInput.value = addr.city;
+                        } else if (addr.town && addr.town.trim() !== '') {
+                            cityInput.value = addr.town;
+                        } else if (addr.village && addr.village.trim() !== '') {
+                            cityInput.value = addr.village;
+                        }
+                        if (addr.postcode && addr.postcode.trim() !== '' && postalCodeInput) {
+                            postalCodeInput.value = addr.postcode;
+                        }
+                    }
+                })
+                .catch(err => console.error('Erreur géocodage inverse:', err));
+        }
+    }
+
+    // Clic sur la carte pour définir la position
+    map.on('click', function(e) {
+        updatePosition(e.latlng.lat, e.latlng.lng, true);
+    });
+
+    // Message d'aide
+    const helpDiv = L.DomUtil.create('div', 'alert alert-info alert-dismissible fade show mt-2');
+    helpDiv.innerHTML = `
+        <i class="bi bi-info-circle"></i>
+        <strong>Utilisation de la carte :</strong>
+        <ul class="mb-0 small">
+            <li>Utilisez la barre de recherche pour trouver une adresse</li>
+            <li>Cliquez sur la carte pour placer un marqueur</li>
+            <li>Faites glisser le marqueur pour ajuster la position</li>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    mapElement.parentElement.insertBefore(helpDiv, mapElement);
+
+})();
+</script>
