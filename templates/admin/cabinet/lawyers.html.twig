@@ -1,12 +1,12 @@
 {% extends 'admin/base.html.twig' %}
 
-{% block title %}Avocats du Cabinet {{ cabinet.name }}{% endblock %}
+{% block title %}Conseils juridiques du Cabinet {{ cabinet.name }}{% endblock %}
 
 {% block body %}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">
             <i class="bi bi-people text-primary"></i>
-            Avocats du Cabinet {{ cabinet.name }}
+            Conseils juridiques du Cabinet {{ cabinet.name }}
         </h1>
         <a href="{{ path('admin_cabinet_index') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i>
@@ -40,7 +40,7 @@
                     {% endif %}
                     <p class="mb-1">
                         <i class="bi bi-people-fill"></i>
-                        <strong>Avocats rattachés:</strong> {{ cabinetLawyers|length }}
+                        <strong>Conseils juridiques rattachés:</strong> {{ cabinetLawyers|length }}
                     </p>
                     {% if cabinet.managingPartner %}
                         <p class="mb-1">
@@ -64,7 +64,7 @@
             <div class="card">
                 <div class="card-header">
                     <i class="bi bi-check-circle"></i>
-                    Avocats Rattachés ({{ cabinetLawyers|length }})
+                    Conseils juridiques Rattachés ({{ cabinetLawyers|length }})
                 </div>
                 <div class="card-body">
                     {% if cabinetLawyers|length > 0 %}
@@ -128,9 +128,9 @@
                     {% else %}
                         <div class="alert alert-info mb-0">
                             <i class="bi bi-info-circle"></i>
-                            Aucun avocat n'est rattaché à ce cabinet pour le moment.
+                            Aucun conseil juridique n'est rattaché à ce cabinet pour le moment.
                             <br>
-                            <small class="text-muted">Utilisez la liste de droite pour rattacher des avocats.</small>
+                            <small class="text-muted">Utilisez la liste de droite pour rattacher des conseils juridiques.</small>
                         </div>
                     {% endif %}
                 </div>
@@ -143,7 +143,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>
                         <i class="bi bi-plus-circle"></i>
-                        Avocats Disponibles
+                        Conseils juridiques Disponibles
                     </span>
                     <span class="badge bg-secondary" id="available-count">0</span>
                 </div>
@@ -161,7 +161,7 @@
                             <input type="text"
                                    id="search-available-lawyers"
                                    class="form-control form-control-sm"
-                                   placeholder="Rechercher un avocat..."
+                                   placeholder="Rechercher un conseil juridique..."
                                    autocomplete="off">
                             <small class="form-text text-muted">
                                 <i class="bi bi-info-circle"></i>
@@ -204,12 +204,12 @@
 
                         <div id="no-results" class="alert alert-info mt-3" style="display: none;">
                             <i class="bi bi-search"></i>
-                            Aucun avocat ne correspond à votre recherche.
+                            Aucun conseil juridique ne correspond à votre recherche.
                         </div>
                     {% else %}
                         <div class="alert alert-warning mb-0">
                             <i class="bi bi-exclamation-triangle"></i>
-                            Tous les avocats sont déjà rattachés à ce cabinet ou il n'y a plus d'avocats disponibles.
+                            Tous les conseils juridiques sont déjà rattachés à ce cabinet ou il n'y a plus de conseils juridiques disponibles.
                         </div>
                     {% endif %}
                 </div>

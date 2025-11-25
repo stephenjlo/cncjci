@@ -28,10 +28,21 @@ class DashboardController extends AbstractController
         // STATISTIQUES POUR SUPER_ADMIN
         // ═══════════════════════════════════════════════════
         if ($user->isSuperAdmin()) {
+            $totalCabinets = $this->cabinetRepository->count([]);
+            $activeCabinets = $this->cabinetRepository->count(['isActive' => true]);
+            $inactiveCabinets = $totalCabinets - $activeCabinets;
+
+            $totalLawyers = $this->lawyerRepository->count([]);
+            $activeLawyers = $this->lawyerRepository->count(['isActive' => true]);
+            $inactiveLawyers = $totalLawyers - $activeLawyers;
+
             $stats = [
-                'totalCabinets' => $this->cabinetRepository->count([]),
-                'activeCabinets' => $this->cabinetRepository->count(['isActive' => true]),
-                'totalLawyers' => $this->lawyerRepository->count([]),
+                'totalCabinets' => $totalCabinets,
+                'activeCabinets' => $activeCabinets,
+                'inactiveCabinets' => $inactiveCabinets,
+                'totalLawyers' => $totalLawyers,
+                'activeLawyers' => $activeLawyers,
+                'inactiveLawyers' => $inactiveLawyers,
             ];
 
             // Dernière activité - dernier lawyer créé
@@ -50,10 +61,14 @@ class DashboardController extends AbstractController
         elseif ($user->isRespoCabinet() && $user->getCabinet()) {
             $cabinet = $user->getCabinet();
 
+            $totalCabinetLawyers = $this->lawyerRepository->count(['cabinet' => $cabinet]);
+            $activeCabinetLawyers = $this->lawyerRepository->count(['cabinet' => $cabinet, 'isActive' => true]);
+            $inactiveCabinetLawyers = $totalCabinetLawyers - $activeCabinetLawyers;
+
             $stats = [
-                'cabinetLawyers' => $this->lawyerRepository->count([
-                    'cabinet' => $cabinet
-                ]),
+                'cabinetLawyers' => $totalCabinetLawyers,
+                'activeCabinetLawyers' => $activeCabinetLawyers,
+                'inactiveCabinetLawyers' => $inactiveCabinetLawyers,
             ];
 
             // Dernière activité - dernier lawyer du cabinet

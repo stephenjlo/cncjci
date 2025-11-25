@@ -16,13 +16,19 @@
     <div class="row">
         {% if is_granted('ROLE_SUPER_ADMIN') %}
             {# Statistiques pour Super Admin #}
-            <div class="col-md-4">
+            <div class="col-md-6 col-lg-3 mb-3">
                 <div class="card text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="card-title mb-0">Total Cabinets</h6>
                                 <h2 class="mb-0 mt-2">{{ stats.totalCabinets ?? 0 }}</h2>
+                                <small class="opacity-75">
+                                    <i class="bi bi-check-circle"></i> {{ stats.activeCabinets ?? 0 }} actifs
+                                    {% if stats.inactiveCabinets > 0 %}
+                                        | <i class="bi bi-x-circle"></i> {{ stats.inactiveCabinets }} inactifs
+                                    {% endif %}
+                                </small>
                             </div>
                             <div class="fs-1 opacity-50">
                                 <i class="bi bi-building"></i>
@@ -31,19 +37,25 @@
                     </div>
                     <div class="card-footer bg-transparent border-0">
                         <a href="{{ path('admin_cabinet_index') }}" class="text-white text-decoration-none">
-                            Gérer les cabinets <i class="bi bi-arrow-right"></i>
+                            Gérer <i class="bi bi-arrow-right"></i>
                         </a>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-6 col-lg-3 mb-3">
                 <div class="card text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="card-title mb-0">Total Avocats</h6>
+                                <h6 class="card-title mb-0">Total Conseils juridiques</h6>
                                 <h2 class="mb-0 mt-2">{{ stats.totalLawyers ?? 0 }}</h2>
+                                <small class="opacity-75">
+                                    <i class="bi bi-check-circle"></i> {{ stats.activeLawyers ?? 0 }} actifs
+                                    {% if stats.inactiveLawyers > 0 %}
+                                        | <i class="bi bi-x-circle"></i> {{ stats.inactiveLawyers }} inactifs
+                                    {% endif %}
+                                </small>
                             </div>
                             <div class="fs-1 opacity-50">
                                 <i class="bi bi-people"></i>
@@ -52,19 +64,22 @@
                     </div>
                     <div class="card-footer bg-transparent border-0">
                         <a href="{{ path('admin_lawyer_index') }}" class="text-white text-decoration-none">
-                            Gérer les avocats <i class="bi bi-arrow-right"></i>
+                            Gérer <i class="bi bi-arrow-right"></i>
                         </a>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-6 col-lg-3 mb-3">
                 <div class="card text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="card-title mb-0">Cabinets Actifs</h6>
                                 <h2 class="mb-0 mt-2">{{ stats.activeCabinets ?? 0 }}</h2>
+                                <small class="opacity-75">
+                                    {{ ((stats.activeCabinets / stats.totalCabinets) * 100)|number_format(0) }}% du total
+                                </small>
                             </div>
                             <div class="fs-1 opacity-50">
                                 <i class="bi bi-check-circle"></i>
@@ -73,9 +88,28 @@
                     </div>
                 </div>
             </div>
+
+            <div class="col-md-6 col-lg-3 mb-3">
+                <div class="card text-white" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0">Conseils Actifs</h6>
+                                <h2 class="mb-0 mt-2">{{ stats.activeLawyers ?? 0 }}</h2>
+                                <small class="opacity-75">
+                                    {{ ((stats.activeLawyers / stats.totalLawyers) * 100)|number_format(0) }}% du total
+                                </small>
+                            </div>
+                            <div class="fs-1 opacity-50">
+                                <i class="bi bi-person-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         {% elseif is_granted('ROLE_RESPO_CABINET') %}
             {# Statistiques pour Responsable Cabinet #}
-            <div class="col-md-6">
+            <div class="col-md-6 col-lg-4 mb-3">
                 <div class="card text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
@@ -90,19 +124,25 @@
                     </div>
                     <div class="card-footer bg-transparent border-0">
                         <a href="{{ path('admin_cabinet_edit', {id: user.cabinet.id}) }}" class="text-white text-decoration-none">
-                            Modifier le cabinet <i class="bi bi-arrow-right"></i>
+                            Modifier <i class="bi bi-arrow-right"></i>
                         </a>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-6 col-lg-4 mb-3">
                 <div class="card text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="card-title mb-0">Avocats du Cabinet</h6>
+                                <h6 class="card-title mb-0">Total Conseils</h6>
                                 <h2 class="mb-0 mt-2">{{ stats.cabinetLawyers ?? 0 }}</h2>
+                                <small class="opacity-75">
+                                    <i class="bi bi-check-circle"></i> {{ stats.activeCabinetLawyers ?? 0 }} actifs
+                                    {% if stats.inactiveCabinetLawyers > 0 %}
+                                        | <i class="bi bi-x-circle"></i> {{ stats.inactiveCabinetLawyers }} inactifs
+                                    {% endif %}
+                                </small>
                             </div>
                             <div class="fs-1 opacity-50">
                                 <i class="bi bi-people"></i>
@@ -111,8 +151,31 @@
                     </div>
                     <div class="card-footer bg-transparent border-0">
                         <a href="{{ path('admin_lawyer_index') }}" class="text-white text-decoration-none">
-                            Gérer les avocats <i class="bi bi-arrow-right"></i>
+                            Gérer <i class="bi bi-arrow-right"></i>
                         </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12 col-lg-4 mb-3">
+                <div class="card text-white" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0">Conseils Actifs</h6>
+                                <h2 class="mb-0 mt-2">{{ stats.activeCabinetLawyers ?? 0 }}</h2>
+                                <small class="opacity-75">
+                                    {% if stats.cabinetLawyers > 0 %}
+                                        {{ ((stats.activeCabinetLawyers / stats.cabinetLawyers) * 100)|number_format(0) }}% du total
+                                    {% else %}
+                                        0% du total
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="fs-1 opacity-50">
+                                <i class="bi bi-person-check"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

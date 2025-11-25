@@ -32,6 +32,9 @@ class Lawyer
     #[ORM\Column(length:255, nullable:true)]
     private ?string $photoUrl = null;
 
+    #[ORM\Column(type:'boolean', options: ['default' => true])]
+    private bool $isActive = true;
+
     // ═══════════════════════════════════════════════════
     // RELATIONS (NOUVELLES)
     // ═══════════════════════════════════════════════════
@@ -277,6 +280,13 @@ class Lawyer
     public function setPhotoUrl(?string $photoUrl): self
     {
         $this->photoUrl = $photoUrl;
+        return $this;
+    }
+
+    public function isActive(): bool { return $this->isActive; }
+    public function setIsActive(bool $isActive): self
+    {
+        $this->isActive = $isActive;
         return $this;
     }
 

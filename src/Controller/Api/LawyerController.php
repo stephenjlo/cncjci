@@ -42,7 +42,7 @@ class LawyerController extends AbstractController
     #[Route('/{slug}', methods: ['GET'])]
     public function show(string $slug): JsonResponse
     {
-        $lawyer = $this->repo->findOneBy(['slug' => $slug]);
+        $lawyer = $this->repo->findOneBy(['slug' => $slug, 'isActive' => true]);
 
         if (!$lawyer) {
             return $this->json(['error' => 'Not found'], 404);

@@ -243,7 +243,7 @@
                                 <code>{{ cabinet.slug }}</code>
                             </dd>
 
-                            <dt class="col-sm-4">Avocats:</dt>
+                            <dt class="col-sm-4">Conseils juridiques:</dt>
                             <dd class="col-sm-8">
                                 <span class="badge bg-primary">{{ cabinet.lawyers|length }}</span>
                             </dd>
@@ -305,7 +305,7 @@
                         </h6>
                         <ul class="small mb-0">
                             <li>Le slug sera généré automatiquement à partir du nom si vous le laissez vide</li>
-                            <li>Vous pourrez désigner le responsable après avoir créé le cabinet et ajouté des avocats</li>
+                            <li>Vous pourrez désigner le responsable après avoir créé le cabinet et ajouté des conseils juridiques</li>
                             <li>Utilisez la carte pour définir précisément la localisation</li>
                             <li>Ajoutez au moins un téléphone et un email de contact</li>
                         </ul>
@@ -329,11 +329,11 @@
             $('.select2-lawyers').select2({
                 theme: 'bootstrap-5',
                 width: '100%',
-                placeholder: 'Rechercher et sélectionner des avocats...',
+                placeholder: 'Rechercher et sélectionner des conseils juridiques...',
                 allowClear: true,
                 language: {
                     noResults: function() {
-                        return "Aucun avocat trouvé";
+                        return "Aucun conseil juridique trouvé";
                     },
                     searching: function() {
                         return "Recherche en cours...";
@@ -349,7 +349,7 @@
                 allowClear: true,
                 language: {
                     noResults: function() {
-                        return "Aucun avocat trouvé";
+                        return "Aucun conseil juridique trouvé";
                     },
                     searching: function() {
                         return "Recherche en cours...";

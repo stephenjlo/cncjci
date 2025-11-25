@@ -48,7 +48,7 @@ class CabinetController extends AbstractController
     #[Route('/{slug}', methods: ['GET'])]
     public function show(string $slug): JsonResponse
     {
-        $cabinet = $this->repo->findOneBy(['slug' => $slug]);
+        $cabinet = $this->repo->findOneBy(['slug' => $slug, 'isActive' => true]);
 
         if (!$cabinet) {
             return $this->json(['error' => 'Not found'], 404);
@@ -187,13 +187,14 @@ class CabinetController extends AbstractController
             ];
         }
 
-        // Avocats
+        // Avocats (uniquement ceux actifs)
         $lawyersCollection = $cabinet->getLawyers();
         if ($lawyersCollection->isEmpty()) {
             // Fallback: chercher par cabinet_id
-            $lawyersCollection = $this->lawyers->findBy(['cabinet' => $cabinet]);
+            $lawyersCollection = $this->lawyers->findBy(['cabinet' => $cabinet, 'isActive' => true]);
         } else {
-            $lawyersCollection = $lawyersCollection->toArray();
+            // Filtrer pour ne garder que les lawyers actifs
+            $lawyersCollection = array_filter($lawyersCollection->toArray(), fn($l) => $l->isActive());
         }
 
         // Tri: associé gérant en premier

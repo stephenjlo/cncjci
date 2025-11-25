@@ -40,14 +40,24 @@
                                     </td>
                                     <td><code class="small">{{ specialty.slug }}</code></td>
                                     <td class="text-center">
-                                        <form method="post"
-                                              action="{{ path('admin_specialty_delete', {id: specialty.id}) }}"
-                                              style="display: inline;"
-                                              onsubmit="return confirm('Supprimer cette spécialité ?');">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-trash"></i>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-edit"
+                                                    data-id="{{ specialty.id }}"
+                                                    data-name="{{ specialty.name }}"
+                                                    data-description="{{ specialty.description }}"
+                                                    title="Modifier">
+                                                <i class="bi bi-pencil"></i>
                                             </button>
-                                        </form>
+                                            <form method="post"
+                                                  action="{{ path('admin_specialty_delete', {id: specialty.id}) }}"
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Supprimer cette spécialité ?');">
+                                                <button type="submit" class="btn btn-outline-danger" title="Supprimer">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             {% else %}
@@ -67,10 +77,11 @@
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <i class="bi bi-plus-circle"></i>
-                    Ajouter une spécialité
+                    <span id="form-title">Ajouter une spécialité</span>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{{ path('admin_specialty_new') }}">
+                    <form method="post" action="{{ path('admin_specialty_new') }}" id="specialty-form">
+                        <input type="hidden" name="specialty_id" id="specialty_id" value="">
                         <div class="mb-3">
                             <label for="name" class="form-label">Nom de la spécialité</label>
                             <input type="text"
@@ -91,10 +102,16 @@
                                 Le slug sera généré automatiquement
                             </small>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-check-circle"></i>
-                            Créer
-                        </button>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" id="submit-btn">
+                                <i class="bi bi-check-circle"></i>
+                                <span id="submit-text">Créer</span>
+                            </button>
+                            <button type="button" class="btn btn-secondary d-none" id="cancel-btn">
+                                <i class="bi bi-x-circle"></i>
+                                Annuler
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -114,4 +131,52 @@
         </div>
     </div>
 
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('specialty-form');
+            const formTitle = document.getElementById('form-title');
+            const submitBtn = document.getElementById('submit-btn');
+            const submitText = document.getElementById('submit-text');
+            const cancelBtn = document.getElementById('cancel-btn');
+            const nameInput = document.getElementById('name');
+            const descriptionInput = document.getElementById('description');
+            const specialtyIdInput = document.getElementById('specialty_id');
+
+            // Boutons d'édition
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    const name = this.dataset.name;
+                    const description = this.dataset.description || '';
+
+                    // Passer en mode édition
+                    formTitle.textContent = 'Modifier la spécialité';
+                    submitText.textContent = 'Modifier';
+                    nameInput.value = name;
+                    descriptionInput.value = description;
+                    specialtyIdInput.value = id;
+                    form.action = '{{ path('admin_specialty_edit', {id: '__ID__'}) }}'.replace('__ID__', id);
+                    cancelBtn.classList.remove('d-none');
+
+                    // Scroll vers le formulaire
+                    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+
+            // Bouton annuler
+            cancelBtn.addEventListener('click', function() {
+                formTitle.textContent = 'Ajouter une spécialité';
+                submitText.textContent = 'Créer';
+                nameInput.value = '';
+                descriptionInput.value = '';
+                specialtyIdInput.value = '';
+                form.action = '{{ path('admin_specialty_new') }}';
+                cancelBtn.classList.add('d-none');
+            });
+        });
+    </script>
 {% endblock %}

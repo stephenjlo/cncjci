@@ -11,7 +11,9 @@ class CabinetRepository extends ServiceEntityRepository {
       $page = max(1, (int)($q['page'] ?? 1));
       $pageSize = min(50, max(1, (int)($q['pageSize'] ?? 12)));
 
-      $qb = $this->createQueryBuilder('c');
+      $qb = $this->createQueryBuilder('c')
+          ->andWhere('c.isActive = :active')
+          ->setParameter('active', true);
 
       if (!empty($q['name'])) {
           $qb->andWhere('LOWER(c.name) LIKE :n')
@@ -31,7 +33,10 @@ class CabinetRepository extends ServiceEntityRepository {
 
       $items = $qb->getQuery()->getResult();
 
-      $tq = $this->createQueryBuilder('c')->select('COUNT(c.id)');
+      $tq = $this->createQueryBuilder('c')
+          ->select('COUNT(c.id)')
+          ->andWhere('c.isActive = :active')
+          ->setParameter('active', true);
       if (!empty($q['name'])) {
           $tq->andWhere('LOWER(c.name) LIKE :n')
             ->setParameter('n', '%' . mb_strtolower($q['name']) . '%');

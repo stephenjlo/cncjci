@@ -1,6 +1,6 @@
 {% extends 'admin/base.html.twig' %}
 
-{% block title %}Gestion des Avocats{% endblock %}
+{% block title %}Gestion des Conseils juridiques{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
@@ -12,11 +12,11 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">
             <i class="bi bi-people text-primary"></i>
-            Gestion des Avocats
+            Gestion des Conseils juridiques
         </h1>
         <a href="{{ path('admin_lawyer_new') }}" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i>
-            Nouvel Avocat
+            Nouveau Conseil juridique
         </a>
     </div>
     {% if lawyers|length > 0 %}
@@ -25,7 +25,7 @@
                 <div class="card">
                     <div class="card-body text-center">
                         <h3 class="text-primary mb-0">{{ lawyers|length }}</h3>
-                        <small class="text-muted">Avocat(s) affiché(s)</small>
+                        <small class="text-muted">Conseil(s) juridique(s) affiché(s)</small>
                     </div>
                 </div>
             </div>
@@ -60,7 +60,7 @@
             <i class="bi bi-info-circle"></i>
             <strong>Cabinet : {{ app.user.cabinet.name }}</strong>
             <br>
-            <small>Vous ne pouvez gérer que les avocats de votre cabinet.</small>
+            <small>Vous ne pouvez gérer que les conseils juridiques de votre cabinet.</small>
         </div>
     {% endif %}
 
@@ -69,7 +69,7 @@
         <div class="card">
             <div class="card-header">
                 <i class="bi bi-list-ul"></i>
-                Liste des avocats
+                Liste des conseils juridiques
             </div>
             <div class="card-body">
                 <table id="lawyers-table" class="table table-hover table-striped w-100">
@@ -81,7 +81,8 @@
                             <th>Spécialités</th>
                             <th>Contact</th>
                             <th>Barreau</th>
-                            <th style="width: 150px;" class="text-center">Actions</th>
+                            <th style="width: 100px;" class="text-center">Statut</th>
+                            <th style="width: 200px;" class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -174,6 +175,19 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-center">
+                                    {% if lawyer.isActive %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i>
+                                            Actif
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i>
+                                            Inactif
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
                                     <div class="btn-group btn-group-sm" role="group">
                                         {% if is_granted('LAWYER_EDIT', lawyer) %}
                                             <a href="{{ path('admin_lawyer_edit', {id: lawyer.id}) }}"
@@ -181,15 +195,30 @@
                                                title="Modifier">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
+
+                                            {# Activer/Désactiver #}
+                                            <form method="post"
+                                                  action="{{ path('admin_lawyer_toggle', {id: lawyer.id}) }}"
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Confirmer le changement de statut ?');">
+                                                <button type="submit"
+                                                        class="btn btn-outline-{{ lawyer.isActive ? 'warning' : 'success' }}"
+                                                        title="{{ lawyer.isActive ? 'Désactiver' : 'Activer' }}">
+                                                    <i class="bi bi-{{ lawyer.isActive ? 'pause-circle' : 'play-circle' }}"></i>
+                                                </button>
+                                            </form>
                                         {% endif %}
                                     </div>
 
                                     {# Bouton création compte User si pas encore de compte #}
-                                    {% if lawyer.primaryEmail or lawyer.email %}
-                                        {% set hasUser = false %}
-                                        {% for user in app.user.cabinet ? app.user.cabinet.lawyers : [] %}
-                                            {# Note: Vérification approximative, le vrai check se fait côté serveur #}
-                                        {% endfor %}
+                                    {% if existingUsers[lawyer.id] is defined and existingUsers[lawyer.id] %}
+                                        {# Le compte existe déjà #}
+                                        <small class="text-success d-block mt-2">
+                                            <i class="bi bi-check-circle"></i>
+                                            Compte créé
+                                        </small>
+                                    {% elseif lawyer.primaryEmail or lawyer.email %}
+                                        {# Le compte n'existe pas encore et l'email est présent #}
                                         <form method="post"
                                               action="{{ path('admin_lawyer_create_user', {id: lawyer.id}) }}"
                                               style="display: inline; margin-top: 5px;"
@@ -202,6 +231,7 @@
                                             </button>
                                         </form>
                                     {% else %}
+                                        {# Pas d'email, impossible de créer un compte #}
                                         <small class="text-muted d-block mt-2">
                                             <i class="bi bi-exclamation-triangle"></i>
                                             Email requis
@@ -219,17 +249,17 @@
         <div class="card">
             <div class="card-body text-center py-5">
                 <i class="bi bi-inbox display-1 text-muted"></i>
-                <h4 class="mt-3">Aucun avocat trouvé</h4>
+                <h4 class="mt-3">Aucun conseil juridique trouvé</h4>
                 <p class="text-muted">
                     {% if is_granted('ROLE_RESPO_CABINET') and not is_granted('ROLE_SUPER_ADMIN') %}
-                        Commencez par ajouter des avocats à votre cabinet
+                        Commencez par ajouter des conseils juridiques à votre cabinet
                     {% else %}
-                        Commencez par créer votre premier avocat
+                        Commencez par créer votre premier conseil juridique
                     {% endif %}
                 </p>
                 <a href="{{ path('admin_lawyer_new') }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i>
-                    Créer un avocat
+                    Créer un conseil juridique
                 </a>
             </div>
         </div>
@@ -255,8 +285,8 @@
                 pageLength: 25,
                 order: [[1, 'asc']], // Tri par nom par défaut
                 columnDefs: [
-                    { orderable: false, targets: [0, 6] }, // Désactiver le tri sur Photo et Actions
-                    { searchable: false, targets: [0, 6] }  // Désactiver la recherche sur Photo et Actions
+                    { orderable: false, targets: [0, 7] }, // Désactiver le tri sur Photo et Actions
+                    { searchable: false, targets: [0, 7] }  // Désactiver la recherche sur Photo et Actions
                 ],
                 dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
                      "<'row'<'col-sm-12'tr>>" +

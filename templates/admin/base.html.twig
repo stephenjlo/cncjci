@@ -200,7 +200,7 @@
             {% elseif is_granted('ROLE_RESPO_CABINET') %}
                 <span class="badge bg-warning text-dark me-3">Responsable Cabinet</span>
             {% elseif is_granted('ROLE_LAWYER') %}
-                <span class="badge bg-info me-3">Avocat</span>
+                <span class="badge bg-info me-3">Conseil juridique</span>
             {% endif %}
 
             <a href="{{ path('app_logout') }}" class="btn btn-outline-danger btn-sm">
@@ -249,6 +249,13 @@
                             News
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'admin_specialty' in app.request.attributes.get('_route') ? 'active' : '' }}"
+                           href="{{ path('admin_specialty_index') }}">
+                            <i class="bi bi-briefcase"></i>
+                            Spécialités
+                        </a>
+                    </li>
                 {% endif %}
 
                 {% if is_granted('ROLE_RESPO_CABINET') %}
@@ -256,7 +263,7 @@
                         <a class="nav-link {{ 'admin_lawyer' in app.request.attributes.get('_route') and 'profile' not in app.request.attributes.get('_route') ? 'active' : '' }}"
                            href="{{ path('admin_lawyer_index') }}">
                             <i class="bi bi-people"></i>
-                            Avocats
+                            Conseils juridiques
                         </a>
                     </li>
                 {% endif %}

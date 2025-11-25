@@ -14,7 +14,9 @@ class LawyerRepository extends ServiceEntityRepository {
 
       $qb = $this->createQueryBuilder('l')
           ->leftJoin('l.cabinet', 'c')->addSelect('c')
-          ->leftJoin('l.specialties', 's')->addSelect('s');
+          ->leftJoin('l.specialties', 's')->addSelect('s')
+          ->andWhere('l.isActive = :active')
+          ->setParameter('active', true);
 
       if (!empty($q['name'])) {
           $qb->andWhere("LOWER(CONCAT(l.firstName, ' ', l.lastName)) LIKE :q")
@@ -42,7 +44,9 @@ class LawyerRepository extends ServiceEntityRepository {
       $tq = $this->createQueryBuilder('l')
           ->select('COUNT(DISTINCT l.id)')
           ->leftJoin('l.cabinet', 'c')
-          ->leftJoin('l.specialties', 's');
+          ->leftJoin('l.specialties', 's')
+          ->andWhere('l.isActive = :active')
+          ->setParameter('active', true);
 
       if (!empty($q['name'])) {
           $tq->andWhere("LOWER(CONCAT(l.firstName, ' ', l.lastName)) LIKE :q")

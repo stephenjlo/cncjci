@@ -54,13 +54,40 @@ class SpecialtyAdminController extends AbstractController
         return $this->redirectToRoute('admin_specialty_index');
     }
 
+    #[Route('/{id}/edit', name: 'admin_specialty_edit', methods: ['POST'])]
+    public function edit(Specialty $specialty, Request $request): Response
+    {
+        $name = $request->request->get('name');
+        $description = $request->request->get('description');
+
+        if (!$name) {
+            $this->addFlash('error', 'Le nom est obligatoire');
+            return $this->redirectToRoute('admin_specialty_index');
+        }
+
+        $specialty->setName($name);
+        $specialty->setSlug(strtolower($this->slugger->slug($name)));
+        $specialty->setDescription($description);
+
+        $this->em->flush();
+
+        $this->addFlash('success', 'Spécialité modifiée avec succès');
+        return $this->redirectToRoute('admin_specialty_index');
+    }
+
     #[Route('/{id}/delete', name: 'admin_specialty_delete', methods: ['POST'])]
     public function delete(Specialty $specialty): Response
     {
-        $this->em->remove($specialty);
-        $this->em->flush();
+        try {
+            $name = $specialty->getName();
+            $this->em->remove($specialty);
+            $this->em->flush();
 
-        $this->addFlash('success', 'Spécialité supprimée avec succès');
+            $this->addFlash('success', sprintf('Spécialité "%s" supprimée avec succès', $name));
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Impossible de supprimer cette spécialité (elle est peut-être utilisée par des conseils juridiques)');
+        }
+
         return $this->redirectToRoute('admin_specialty_index');
     }
 }

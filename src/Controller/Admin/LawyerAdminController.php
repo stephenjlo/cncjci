@@ -58,11 +58,30 @@ class LawyerAdminController extends AbstractController
 
         $lawyers = $qb->getQuery()->getResult();
 
+        // Récupérer les Users associés aux lawyers pour savoir qui a déjà un compte
+        $lawyerIds = array_map(fn($l) => $l->getId(), $lawyers);
+        $usersRepository = $this->em->getRepository(\App\Entity\User::class);
+        $existingUsers = [];
+        if (!empty($lawyerIds)) {
+            $users = $usersRepository->createQueryBuilder('u')
+                ->where('u.lawyer IN (:lawyerIds)')
+                ->setParameter('lawyerIds', $lawyerIds)
+                ->getQuery()
+                ->getResult();
+
+            foreach ($users as $u) {
+                if ($u->getLawyer()) {
+                    $existingUsers[$u->getLawyer()->getId()] = true;
+                }
+            }
+        }
+
         return $this->render('admin/lawyer/index.html.twig', [
             'lawyers' => $lawyers,
             'search' => $search,
             'page' => $page,
             'cabinetFilter' => $cabinetFilter,
+            'existingUsers' => $existingUsers,
         ]);
     }
 
@@ -315,6 +334,25 @@ class LawyerAdminController extends AbstractController
         } else {
             $this->addFlash('error', 'Impossible de créer le compte utilisateur (email manquant)');
         }
+
+        return $this->redirectToRoute('admin_lawyer_index');
+    }
+
+    #[Route('/{id}/toggle', name: 'admin_lawyer_toggle', methods: ['POST'])]
+    #[IsGranted('ROLE_RESPO_CABINET')]
+    public function toggle(Lawyer $lawyer): Response
+    {
+        $this->denyAccessUnlessGranted('LAWYER_EDIT', $lawyer);
+
+        $lawyer->setIsActive(!$lawyer->isActive());
+        $this->em->flush();
+
+        $status = $lawyer->isActive() ? 'activé' : 'désactivé';
+        $this->addFlash('success', sprintf(
+            'Le conseil juridique %s a été %s avec succès',
+            $lawyer->getFullName(),
+            $status
+        ));
 
         return $this->redirectToRoute('admin_lawyer_index');
     }
